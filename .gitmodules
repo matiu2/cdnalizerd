@@ -1,3 +1,6 @@
 [submodule "3rd_party/curlcpp"]
 	path = 3rd_party/curlcpp
 	url = https://github.com/JosephP91/curlcpp.git
+[submodule "3rd_party/bandit"]
+	path = 3rd_party/bandit
+	url = https://github.com/joakimkarlsson/bandit.git
