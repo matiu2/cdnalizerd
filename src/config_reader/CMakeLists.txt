@@ -1,0 +1,4 @@
+project(config_reader)
+
+add_executable(test_string_functions test_string_functions.cpp string_functions.cpp)
+add_test(test_trim test_string_functions)
