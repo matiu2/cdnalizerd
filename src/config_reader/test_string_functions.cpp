@@ -12,25 +12,25 @@ go_bandit([](){
 
 
     describe("trim", [&](){
-        it("1. Doesn't touch an empty string", [&] {
+        it("1.1. Doesn't touch an empty string", [&] {
             string data="Already Stripped";
             string copy=data;
             trim(data);
             AssertThat(data, Equals(copy));
         });
-        it("2. Trims spaces and tabs the same", [&] {
+        it("1.2. Trims spaces and tabs the same", [&] {
             string data="  \t  spaces and\t tabs\t";
             string copy=data;
             trim(data);
             AssertThat(data, Equals("spaces and\t tabs"));
         });
-        it("3. Trim left", [&] {
+        it("1.3. Trim left", [&] {
             string data="  \t  trim left";
             string copy=data;
             trim(data);
             AssertThat(data, Equals("trim left"));
         });
-        it("4. Trim right", [&] {
+        it("1.4. Trim right", [&] {
             string data="trim right  \t  ";
             string copy=data;
             trim(data);
@@ -38,6 +38,23 @@ go_bandit([](){
         });
     });
 
+    describe("dequote_string", [&](){
+        std::string input="",
+                    output="";
+        std::string::const_iterator end;
+
+        before_each([&]() {
+            input.clear();
+            output.clear();
+            end = output.end();
+        });
+
+        it("2.1. Handles empty input", [&] {
+            input = "";
+            end = dequoteString(input, output);
+            AssertThat(output, IsEmpty());
+        });
+    });
 });
 
 int main(int argc, char** argv) {
