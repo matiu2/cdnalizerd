@@ -10,4 +10,4 @@ add_test(test_trim_right test_string_functions --only=1.4)
 
 add_test(test_dequote_empty test_string_functions --only=2.1)
 add_test(test_dequote_plain test_string_functions --only=2.2)
-
+add_test(test_dequote_double_quote test_string_functions --only=2.3)
