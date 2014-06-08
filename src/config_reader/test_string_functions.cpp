@@ -54,6 +54,29 @@ go_bandit([](){
             end = dequoteString(input, output);
             AssertThat(output, IsEmpty());
         });
+        it("2.2. No quotes", [&] {
+            input = "This is a normal string";
+            end = dequoteString(input, output);
+            AssertThat(output, Is().EqualTo(input));
+        });
+        it("2.3. Converts a double backslash to a single", [&] {
+            input = R"(This is a \\ normal string)";
+            std::string expected = R"(This is a \ normal string)";
+            end = dequoteString(input, output);
+            AssertThat(output, Is().EqualTo(expected));
+        });
+        it("2.4. Converts an escaped x to a normal x", [&] {
+            input = R"(This is a \x normal string)";
+            std::string expected = R"(This is a x normal string)";
+            end = dequoteString(input, output);
+            AssertThat(output, Is().EqualTo(expected));
+        });
+        it("2.5. Escapes quotes correctly", [&] {
+            input = R"(This is a \"normal\" string)";
+            std::string expected = R"(This is a "normal" string)";
+            end = dequoteString(input, output);
+            AssertThat(output, Is().EqualTo(expected));
+        });
     });
 });
 

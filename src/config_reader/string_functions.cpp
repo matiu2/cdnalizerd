@@ -24,36 +24,19 @@ void trim(std::string& data) {
 
 std::string::const_iterator dequoteString(const std::string& input, std::string& output) {
     auto p = input.cbegin();
-    bool lastWasEscape = false;
     auto out = std::back_inserter(output);
     while (p != input.cend()) {
-        // If this character is escaped, treat it differently
-        if (lastWasEscape) {
-            lastWasEscape = false;
-            switch (*p) {
-                case '"': 
-                    *out++ = '"';
-                    break;
-                case '\\': 
-                    *out++ = '\\';
-                    break;
-                default:
-                    // Treat last '\' as a literal
-                    *out++ = '\\';
-                    *out++ = *p;
-            }
-        } else {
-            // If this is a normal character, watch out for escape sequences
-            switch (*p) {
-                case '\\': 
-                    lastWasEscape = true; // Process the next character differently
-                    break;
-                case '"': return ++p;          // End of input
-                default:
-                    *out++ = *p;
-            };
-        }
-        ++p;
+        switch (*p) {
+            case '\\': 
+                ++p; // Skip the escape character
+                if (p != input.cend())
+                    *out++ = *p++;
+                break;
+            case '"':
+                return ++p;          // End of input
+            default:
+                *out++ = *p++;
+        };
     }
     return input.end();
 }
