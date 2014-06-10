@@ -20,6 +20,12 @@ void trim(std::string& string);
  *  * \x => \x (where 'x' is any other character)
  *  
  */
-std::string::const_iterator dequoteString(const std::string& input, std::string& output);
+using P = std::string::const_iterator;
+P dequoteString(P start, P end, std::string& output);
+
+inline P dequoteString(const std::string& input, std::string& output) {
+    return dequoteString(input.cbegin(), input.cend(), output);
+}
+
 
 }

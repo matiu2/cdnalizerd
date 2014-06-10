@@ -22,15 +22,17 @@ void trim(std::string& data) {
         data.assign(start, end.base());
 }
 
-std::string::const_iterator dequoteString(const std::string& input, std::string& output) {
-    auto p = input.cbegin();
+P dequoteString(P start, P end, std::string& output) {
+    auto p = start;
     auto out = std::back_inserter(output);
-    while (p != input.cend()) {
+    while (p != end) {
         switch (*p) {
             case '\\': 
                 ++p; // Skip the escape character
-                if (p != input.cend())
+                if (p != end)
                     *out++ = *p++;
+                else
+                    *out++ = *p;     // If the last character is a backspace, just return it
                 break;
             case '"':
                 return ++p;          // End of input
@@ -38,7 +40,7 @@ std::string::const_iterator dequoteString(const std::string& input, std::string&
                 *out++ = *p++;
         };
     }
-    return input.end();
+    return end;
 }
 
 }
