@@ -18,6 +18,18 @@ go_bandit([](){
             Config c = read_config(config);
             AssertThat(c.usernames.size(), Equals(size_t(1)));
         });
+        it("3. Can read an apikey", [&] {
+            std::stringstream config;
+            config << "apikey=james_bond";
+            Config c = read_config(config);
+            AssertThat(c.apikeys.size(), Equals(size_t(1)));
+        });
+        it("4. Can read a container", [&] {
+            std::stringstream config;
+            config << "container=james_bond";
+            Config c = read_config(config);
+            AssertThat(c.containers.size(), Equals(size_t(1)));
+        });
     });
 });
 
