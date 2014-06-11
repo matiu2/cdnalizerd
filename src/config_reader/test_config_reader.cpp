@@ -39,6 +39,13 @@ go_bandit([](){
             AssertThat(msg, Contains("Unkown setting"));
             AssertThat(msg, Contains("on line 1"));
         });
+        it("6. knows that paths depend on containers and auth", [&] {
+            std::stringstream config;
+            config << "/path1 /path2";
+            AssertThrows(ConfigError, read_config(config));
+            std::string msg = LastException<ConfigError>().what();
+            AssertThat(msg, Equals("Need to have a valid username, apikey and container before adding a path pair"));
+        });
     });
 });
 
