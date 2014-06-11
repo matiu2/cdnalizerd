@@ -1,5 +1,6 @@
 /// Makes sure that we can read the /etc/cdnalzier.conf config file
 #include "config_reader.hpp"
+#include "errors.hpp"
 #include <bandit/bandit.h>
 #include <sstream>
 
@@ -29,6 +30,14 @@ go_bandit([](){
             config << "container=james_bond";
             Config c = read_config(config);
             AssertThat(c.containers.size(), Equals(size_t(1)));
+        });
+        it("5. hates bad setting names", [&] {
+            std::stringstream config;
+            config << "xxx=james_bond";
+            AssertThrows(ConfigError, read_config(config));
+            std::string msg = LastException<ConfigError>().what();
+            AssertThat(msg, Contains("Unkown setting"));
+            AssertThat(msg, Contains("on line 1"));
         });
     });
 });
