@@ -12,30 +12,30 @@ enable_testing()
 
 include(ExternalProject)
 ExternalProject_Add(curlcpp
-    PREFIX 3rd_party/curlcpp
+    PREFIX 3rd_party
     GIT_REPOSITORY https://github.com/JosephP91/curlcpp.git
     TLS_VERIFY true
     TLS_CAINFO certs/DigiCertHighAssuranceEVRootCA.crt
     TEST_BEFORE_INSTALL 1
-    TEST_COMMAND ctest
+    TEST_COMMAND ""
     UPDATE_COMMAND "" # Skip annoying updates for every build
     INSTALL_COMMAND ""
 )
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/3rd_party/curlcpp/src/include)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/curlcpp/include)
 
 ## Bandit (for tests)
 ExternalProject_Add(bandit
-    PREFIX 3rd_party/bandit
+    PREFIX 3rd_party
     GIT_REPOSITORY https://github.com/joakimkarlsson/bandit.git
     TLS_VERIFY true
     TLS_CAINFO certs/DigiCertHighAssuranceEVRootCA.crt
     UPDATE_COMMAND "" # Skip annoying updates for every build
     INSTALL_COMMAND ""
 )
-SET(BANDIT_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/bandit/src/bandit)
+SET(BANDIT_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/bandit)
 
 ExternalProject_Add(inotify_cxx
-    PREFIX 3rd_party/inotify_cxx
+    PREFIX 3rd_party
     #--Download step--------------
     URL http://inotify.aiken.cz/download/inotify-cxx/inotify-cxx-0.7.4.tar.gz
     URL_HASH SHA1=1f009dc92c29f1b12e14212dddf8d4696c63051a
@@ -47,11 +47,14 @@ ExternalProject_Add(inotify_cxx
     UPDATE_COMMAND "" # Skip annoying updates for every build
     INSTALL_COMMAND ""
 )
-SET(INOTIFY_SRC ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/inotify_cxx/src/inotify-cxx.cpp)
+set(INOTIFY_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/inotify_cxx)
+set(INOTIFY_SOURCE_FILE ${INOTIFY_SOURCE_DIR}/inotify-cxx.cpp)
+add_library(inotify_lib STATIC ${INOTIFY_SOURCE_FILE})
+add_dependencies(inotify_lib inotify_cxx)
 
 ## yajp - Yet another JSON Parser
 ExternalProject_Add(yajp
-    PREFIX 3rd_party/yajp
+    PREFIX 3rd_party
     GIT_REPOSITORY https://github.com/matiu2/yajp.git
     TLS_VERIFY true
     TLS_CAINFO certs/DigiCertHighAssuranceEVRootCA.crt
@@ -62,5 +65,6 @@ ExternalProject_Add(yajp
 )
 SET(YAJP_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/yajp/src)
 
-# Source
+# Sub diretories
 add_subdirectory(src)
+add_subdirectory(experiments)
