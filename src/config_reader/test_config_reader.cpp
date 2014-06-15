@@ -3,6 +3,7 @@
 #include "errors.hpp"
 #include <bandit/bandit.h>
 #include <sstream>
+#include <string>
 
 go_bandit([](){
     using namespace bandit;
@@ -45,6 +46,25 @@ go_bandit([](){
             AssertThrows(ConfigError, read_config(config));
             std::string msg = LastException<ConfigError>().what();
             AssertThat(msg, Equals("Need to have a valid username, apikey and container before adding a path pair"));
+        });
+
+        std::string starter{R"(
+            username=hello
+            apikey=1234
+            container=publish
+        )"};
+
+        it("7. Can read a simple path pair", [&] {
+            std::stringstream config;
+            config << starter;
+            config << "/source/path /destination/path" << std::endl;
+            Config c = read_config(config);
+            EntryData e = c.getEntryByPath("/source/path");
+            AssertThat(e.username, Equals("hello"));
+            AssertThat(e.apikey, Equals("1234"));
+            AssertThat(e.container, Equals("publish"));
+            AssertThat(e.local_dir, Equals("/source/path"));
+            AssertThat(e.remote_dir, Equals("/destination/path"));
         });
     });
 });

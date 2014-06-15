@@ -11,23 +11,8 @@ namespace cdnalizerd {
 struct ConfigReader {
     std::istream& in;
 
-    strings usernames;
-    strings apikeys;
-    strings containers;
-    std::vector<TempEntry> entries;
+    Config config;
     size_t linenum = 0;
-
-    void addEntry(std::string path1, std::string path2) {
-        if ((usernames.size() == 0) ||
-            (apikeys.size() == 0) ||
-            (containers.size() == 0))
-            throw ConfigError("Need to have a valid username, apikey and container before adding a path pair");
-        entries.push_back(
-            {usernames.size()-1,
-             apikeys.size()-1,
-             containers.size()-1,
-             path1, path2});
-    }
 
     /// Reads a single line of config
     void readLine() {
@@ -58,7 +43,7 @@ struct ConfigReader {
         std::string path2;
         readPath(start, line.end(), path2);
         // Store the paths in the configuration
-        addEntry(path1, path2);
+        config.addEntry(path1, path2);
     }
 
     /** Reads in a single path. Handles quoteed strings */
@@ -87,11 +72,11 @@ struct ConfigReader {
         std::copy(++eq, line.end(), std::back_inserter(value));
         // Store the value
         if (variable == "username")
-            usernames.push_back(value);
+            config.addUsername(value);
         else if (variable == "apikey")
-            apikeys.push_back(value);
+            config.addApikey(value);
         else if (variable == "container")
-            containers.push_back(value);
+            config.addContainer(value);
         else {
             std::stringstream msg;
             msg << "Unkown setting '" << variable
@@ -99,19 +84,24 @@ struct ConfigReader {
                 << " of config file";
             throw ConfigError(msg.str());
         }
-
-
     }
 
     ConfigReader(std::istream& in) : in(in) {
         while (in.good())
             readLine();
     }
+
+    Config getConfig() {
+        return config;
+    }
+
 };
 
 Config read_config(std::istream& in) {
     ConfigReader reader(in);
-    return {std::move(reader.usernames), std::move(reader.apikeys), std::move(reader.containers), std::move(reader.entries)};
+    Config result = reader.getConfig();
+    result.use();
+    return result;
 }
 
 }
