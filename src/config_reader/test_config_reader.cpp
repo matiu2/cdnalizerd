@@ -59,12 +59,12 @@ go_bandit([](){
             config << starter;
             config << "/source/path /destination/path" << std::endl;
             Config c = read_config(config);
-            EntryData e = c.getEntryByPath("/source/path");
-            AssertThat(e.username, Equals("hello"));
-            AssertThat(e.apikey, Equals("1234"));
-            AssertThat(e.container, Equals("publish"));
-            AssertThat(e.local_dir, Equals("/source/path"));
-            AssertThat(e.remote_dir, Equals("/destination/path"));
+            const ConfigEntry& e = c.getEntryByPath("/source/path");
+            AssertThat(e.username(), Equals("hello"));
+            AssertThat(e.apikey(), Equals("1234"));
+            AssertThat(e.container(), Equals("publish"));
+            AssertThat(e.local_dir(), Equals("/source/path"));
+            AssertThat(e.remote_dir(), Equals("/destination/path"));
         });
     });
 });

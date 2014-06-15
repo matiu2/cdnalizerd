@@ -21,43 +21,32 @@ struct Data {
     strings containers;
 };
 
-/// A temoorary struct that holds references to all the data in a config Entry
-struct EntryData {
-    const std::string& username;
-    const std::string& apikey;
-    const std::string& container;
-    const std::string& local_dir;
-    const std::string& remote_dir;
-};
-
 /// Holds a single mapping from a local folder to remote location
 class ConfigEntry {
 private:
+    const Data* data;
     size_t username_index;
     size_t apikey_index;
     size_t container_index;
-    std::string local_dir;
-    std::string remote_dir;
+    std::string _local_dir;
+    std::string _remote_dir;
 public:
-    ConfigEntry(size_t username, size_t apikey, size_t container, std::string local_dir, std::string remote_dir)
-    : username_index(username), apikey_index(apikey), container_index(container), local_dir(local_dir), remote_dir(remote_dir) {}
+    ConfigEntry(const Data* data, size_t username, size_t apikey, size_t container, std::string local_dir, std::string remote_dir)
+    : data(data), username_index(username), apikey_index(apikey), container_index(container), _local_dir(local_dir), _remote_dir(remote_dir) {}
 
-    EntryData read(const Data& data) const {
-        return {
-            data.usernames[username_index], 
-            data.apikeys[apikey_index], 
-            data.containers[container_index], 
-            local_dir,
-            remote_dir
-        };
-    }
+    // Attribute Access
+    const std::string& username() const { return data->usernames[username_index]; }
+    const std::string& apikey() const { return data->apikeys[apikey_index]; }
+    const std::string& container() const { return data->containers[container_index]; }
+    const std::string& local_dir() const { return _local_dir; }
+    const std::string& remote_dir() const { return _remote_dir; }
 
     // To allow easy sorting
     bool operator <(const ConfigEntry& other) const {
-        return local_dir < other.local_dir;
+        return _local_dir < other._local_dir;
     }
     bool operator <(const std::string& path) const {
-        return local_dir < path;
+        return _local_dir < path;
     }
 };
 
@@ -92,10 +81,32 @@ public:
             (apikeys.size() == 0) ||
             (containers.size() == 0))
             throw ConfigError("Need to have a valid username, apikey and container before adding a path pair");
-        entries.push_back({usernames.size()-1, apikeys.size()-1, containers.size()-1, local_dir, remote_dir});
+        entries.push_back({this, usernames.size()-1, apikeys.size()-1, containers.size()-1, local_dir, remote_dir});
     }
 
     Config() = default;
+
+    Config(const Config& other) : Data(other), entries(other.entries) {
+        // Update our entries to recognize us as the parent now
+        for (auto& e : entries)
+            e.data = this;
+    }
+
+    Config(Config&& other) : Data(other), entries(other.entries) {
+        // Update our entries to recognize us as the parent now
+        for (auto& e : entries)
+            e.data = this;
+        other.entries.clear();
+    }
+
+    Config& operator=(const Config& other) {
+        Data::operator=(other);
+        entries = other.entries;
+        for (auto& e : entries)
+            e.data = this;
+        return *this;
+    }
+
 
     /// Makes the config ready for use
     const Config& use() {
@@ -105,19 +116,20 @@ public:
         #endif
         return *this;
     }
-    EntryData getEntryByPath(const std::string& path) const {
+
+    const ConfigEntry& getEntryByPath(const std::string& path) const {
         #ifndef NDEBUG
         assert(!entries.dirty);
         #endif
         auto found = std::lower_bound(entries.cbegin(), entries.cend(), path);
         if (found != entries.cend())
-            return found->read(*this);
+            return *found;
         else {
             std::stringstream msg;
             msg << "Couldn't find "
                 << path << " in this list: ";
             for (auto& e : entries)
-                msg << e.local_dir << ", ";
+                msg << e.local_dir() << ", ";
             throw std::logic_error(msg.str());
         }
     }

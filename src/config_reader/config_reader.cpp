@@ -91,8 +91,9 @@ struct ConfigReader {
             readLine();
     }
 
-    Config getConfig() {
-        return config;
+    Config&& getConfig() {
+        config.use(); // Sort the entries
+        return std::move(config);
     }
 
 };
@@ -100,7 +101,6 @@ struct ConfigReader {
 Config read_config(std::istream& in) {
     ConfigReader reader(in);
     Config result = reader.getConfig();
-    result.use();
     return result;
 }
 
