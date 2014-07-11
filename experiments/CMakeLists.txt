@@ -12,5 +12,5 @@ add_executable(rax-login rax-login.cpp)
 set_property(
   TARGET rax-login
   APPEND
-  PROPERTY INCLUDE_DIRECTORIES ${JSON_INCLUDE_DIR} ${CURLCPP_INCLUDE_DIR})
-target_link_libraries(rax-login ${CURL_CPP} ${CURL_LIBRARY})
+  PROPERTY INCLUDE_DIRECTORIES ${JSON_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR} ${CURL_INCLUDE_DIR})
+target_link_libraries(rax-login ${OPENSSL_LIBRARIES} ${CURL_LIBRARIES})

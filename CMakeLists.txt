@@ -8,26 +8,10 @@ enable_testing()
 
 # Dependencies
 
-## libcurlpp-dev
+FIND_PACKAGE(CURL REQUIRED)
+FIND_PACKAGE(OpenSSL REQUIRED)
 
 include(ExternalProject)
-ExternalProject_Add(curlcpp
-    PREFIX 3rd_party
-    GIT_REPOSITORY https://github.com/JosephP91/curlcpp.git
-    TLS_VERIFY true
-    TLS_CAINFO certs/DigiCertHighAssuranceEVRootCA.crt
-    TEST_BEFORE_INSTALL 1
-    TEST_COMMAND ""
-    UPDATE_COMMAND "" # Skip annoying updates for every build
-    INSTALL_COMMAND ""
-)
-set(CURLCPP_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/curlcpp/include)
-find_library(
-    CURL_CPP 
-    NAMES libcurlcpp.a
-    PATHS ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/curlcpp-build/src
-)
-FIND_PACKAGE(CURL REQUIRED)
 
 ## Bandit (for tests)
 ExternalProject_Add(bandit
