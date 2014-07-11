@@ -21,7 +21,13 @@ ExternalProject_Add(curlcpp
     UPDATE_COMMAND "" # Skip annoying updates for every build
     INSTALL_COMMAND ""
 )
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/curlcpp/include)
+set(CURLCPP_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/curlcpp/include)
+find_library(
+    CURL_CPP 
+    NAMES libcurlcpp.a
+    PATHS ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/curlcpp-build/src
+)
+FIND_PACKAGE(CURL REQUIRED)
 
 ## Bandit (for tests)
 ExternalProject_Add(bandit
@@ -49,13 +55,16 @@ ExternalProject_Add(inotify_cxx
 )
 set(INOTIFY_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/inotify_cxx)
 set(INOTIFY_SOURCE_FILE ${INOTIFY_SOURCE_DIR}/inotify-cxx.cpp)
+add_custom_command(
+    OUTPUT ${INOTIFY_SOURCE_FILE}
+    DEPENDS inotify_cxx
+)
 add_library(inotify_lib STATIC ${INOTIFY_SOURCE_FILE})
-add_dependencies(inotify_lib inotify_cxx)
 
-## yajp - Yet another JSON Parser
-ExternalProject_Add(yajp
+## json++ - JSON library
+ExternalProject_Add(json11
     PREFIX 3rd_party
-    GIT_REPOSITORY https://github.com/matiu2/yajp.git
+    GIT_REPOSITORY https://github.com/matiu2/json--11.git
     TLS_VERIFY true
     TLS_CAINFO certs/DigiCertHighAssuranceEVRootCA.crt
     TEST_BEFORE_INSTALL 1
@@ -63,7 +72,7 @@ ExternalProject_Add(yajp
     UPDATE_COMMAND "" # Skip annoying updates for every build
     INSTALL_COMMAND ""
 )
-SET(YAJP_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/yajp/src)
+SET(JSON_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/json11/src)
 
 # Sub diretories
 add_subdirectory(src)

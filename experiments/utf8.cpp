@@ -32,6 +32,7 @@ void hex(T number, OutIterator& out) {
     }
 }
 
+/// Handles a UTF8 char that's encoded in a multibyte format
 template <typename Iterator>
 wchar_t handleMultiByteChar(Iterator& in, const Iterator& end) {
     // Check the number of bytes
@@ -131,12 +132,20 @@ void utf82json(Iterator in, Iterator end, OutIterator out) {
     }
 }
 
+/// Convenience function
 std::string utf82json(const std::string& utf8) {
     std::string result;
     result.reserve(utf8.size() * 1.1); // Assume a 10% size increase
     utf82json(utf8.cbegin(), utf8.cend(), back_inserter(result));
     return result;
 }
+
+/** Converts a UTF8 enconded string into json
+ */
+void utf82json(const std::string& utf8, std::string& out) {
+    utf82json(utf8.cbegin(), utf8.cend(), back_inserter(out));
+}
+
 
 int main(int, char**)
 {
