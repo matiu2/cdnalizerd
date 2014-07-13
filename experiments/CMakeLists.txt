@@ -8,9 +8,9 @@ add_executable(locale locale.cpp)
 
 add_executable(utf8 utf8.cpp)
 
-add_executable(rax-login rax-login.cpp)
-set_property(
-  TARGET rax-login
-  APPEND
-  PROPERTY INCLUDE_DIRECTORIES ${JSON_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR} ${CURL_INCLUDE_DIR})
-target_link_libraries(rax-login ${OPENSSL_LIBRARIES} ${CURL_LIBRARIES})
+#add_executable(rax-login rax-login.cpp)
+#set_property(
+#  TARGET rax-login
+#  APPEND
+#  PROPERTY INCLUDE_DIRECTORIES ${JSON_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR} ${CURL_INCLUDE_DIR})
+#target_link_libraries(rax-login ${OPENSSL_LIBRARIES} ${CURL_LIBRARIES})
