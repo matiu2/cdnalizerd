@@ -4,6 +4,8 @@
 
 #include <iostream>
 #include <stdexcept>
+#include <iterator>
+#include <algorithm>
 
 #include <json.hpp>
 #include <curl.h>
@@ -22,8 +24,8 @@ public:
     setOpt(CURLOPT_VERBOSE, 1);
   }
   ~CurlEasy() { curl_easy_cleanup(handle); }
-  template <typename T> void setOpt(CURLoption opt, T value) const {
-    checkError(curl_easy_setopt(handle, opt, value));
+  template <typename ...T> void setOpt(CURLoption opt, T... values) const {
+    checkError(curl_easy_setopt(handle, opt, values...));
   }
   template <typename... Types> void getInfo(CURLINFO info, Types... args) const {
     checkError(curl_easy_getinfo(handle, info, args...));
@@ -34,6 +36,24 @@ public:
       throw CurlErr(num);
   }
 };
+
+/// Called by curl when we have data to recv
+size_t write_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
+  // @userdata is a curl object
+  const size_t bytes = size * nmemb;
+  std::string* response = static_cast<std::string*>(userdata);
+  response->reserve(response->size() + bytes);
+  std::copy(ptr, ptr+bytes, std::back_inserter(*response));
+  return bytes;
+}
+
+/// Called by curl when it wants data to send
+size_t read_callback(char *buffer, size_t size, size_t nitems, void *instream) {
+  const size_t bytes = size * nitems;
+  auto data = static_cast<std::stringstream *>(instream);
+  data->read(buffer, bytes);
+  return bytes;
+}
 
 int main(int argc, const char *argv[]) {
   using namespace json;
@@ -51,15 +71,21 @@ int main(int argc, const char *argv[]) {
       {"auth", JMap{{"RAX-KSKEY:apiKeyCredentials",
                      JMap{{"username", username}, {"apiKey", apiKey}}}}}}});
 
-  std::stringstream body;
-  body << j;
+  std::stringstream req_body;
+  req_body << j;
 
   // Send it
   CurlEasy c;
+  std::string response;
   c.setOpt(CURLOPT_URL, "https://identity.api.rackspacecloud.com/v2.0/tokens");
   c.setOpt(CURLOPT_POST, 1);
   c.setOpt(CURLOPT_HTTPHEADER, "Content-type: application/json");
-  c.setOpt(CURLOPT_CONNECT_ONLY, 1);
+  c.setOpt(CURLOPT_USERAGENT , "cdnalizerd 0.1");
   c.setOpt(CURLOPT_ERRORBUFFER, 1);
+  c.setOpt(CURLOPT_READDATA, &req_body);
+  c.setOpt(CURLOPT_READFUNCTION, write_callback);
+  c.setOpt(CURLOPT_WRITEDATA, &response);
+  c.setOpt(CURLOPT_WRITEFUNCTION, read_callback);
   c.perform();
+  std::cout << "Received: " << response << std::endl;
 }
