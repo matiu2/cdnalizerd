@@ -15,8 +15,22 @@ struct CurlErr : std::runtime_error {
   CurlErr(CURLcode code) : std::runtime_error(curl_easy_strerror(code)), code(code) {}
 };
 
+struct CURLHeaders {
+  curl_slist* base=nullptr;
+  ~CURLHeaders() {
+    if (base)
+      curl_slist_free_all(base);
+  }
+  void add(const char* header) {
+    curl_slist* last = curl_slist_append(base, header);
+    if (!base)
+      base = last;
+  }
+};
+
 class CurlEasy {
 protected:
+  CURLHeaders headers;
   CURL* handle;
 public:
   CurlEasy() : handle(curl_easy_init()) {
@@ -35,9 +49,14 @@ public:
     if (num != CURLE_OK)
       throw CurlErr(num);
   }
+  void addHeader(const char* header) {
+    headers.add(header);
+    setOpt(CURLOPT_HTTPHEADER, headers.base);
+  }
 };
 
 /// Called by curl when we have data to recv
+extern "C"
 size_t write_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
   // @userdata is a curl object
   const size_t bytes = size * nmemb;
@@ -48,11 +67,12 @@ size_t write_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
 }
 
 /// Called by curl when it wants data to send
+extern "C"
 size_t read_callback(char *buffer, size_t size, size_t nitems, void *instream) {
   const size_t bytes = size * nitems;
   auto data = static_cast<std::stringstream *>(instream);
   data->read(buffer, bytes);
-  return bytes;
+  return data->gcount();
 }
 
 int main(int argc, const char *argv[]) {
@@ -67,25 +87,25 @@ int main(int argc, const char *argv[]) {
   std::string apiKey(argv[2]);
 
   // The body is json
-  JSON j(JList{JMap{
-      {"auth", JMap{{"RAX-KSKEY:apiKeyCredentials",
-                     JMap{{"username", username}, {"apiKey", apiKey}}}}}}});
+  JSON j(
+      JMap{{"auth", JMap{{"RAX-KSKEY:apiKeyCredentials",
+                          JMap{{"username", username}, {"apiKey", apiKey}}}}}});
 
   std::stringstream req_body;
   req_body << j;
+  std::cout << req_body.str() << std::endl;
 
   // Send it
   CurlEasy c;
   std::string response;
   c.setOpt(CURLOPT_URL, "https://identity.api.rackspacecloud.com/v2.0/tokens");
   c.setOpt(CURLOPT_POST, 1);
-  c.setOpt(CURLOPT_HTTPHEADER, "Content-type: application/json");
+  c.addHeader("Content-type: application/json");
   c.setOpt(CURLOPT_USERAGENT , "cdnalizerd 0.1");
-  c.setOpt(CURLOPT_ERRORBUFFER, 1);
   c.setOpt(CURLOPT_READDATA, &req_body);
-  c.setOpt(CURLOPT_READFUNCTION, write_callback);
+  c.setOpt(CURLOPT_READFUNCTION, &read_callback);
   c.setOpt(CURLOPT_WRITEDATA, &response);
-  c.setOpt(CURLOPT_WRITEFUNCTION, read_callback);
+  c.setOpt(CURLOPT_WRITEFUNCTION, &write_callback);
   c.perform();
   std::cout << "Received: " << response << std::endl;
 }
