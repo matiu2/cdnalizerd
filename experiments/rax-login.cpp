@@ -1,5 +1,4 @@
 /// Experiment that logs in to Rackspace US API Servers
-/// ABANDONED: I'm dropping libcurl in favor of cpp-netlib
 
 #include <iostream>
 #include <stdexcept>

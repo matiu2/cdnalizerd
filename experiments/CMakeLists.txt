@@ -12,6 +12,5 @@ add_executable(rax-login rax-login.cpp)
 set_property(
   TARGET rax-login
   APPEND
-  PROPERTY INCLUDE_DIRECTORIES ${JSON_INCLUDE_DIR} ${Boost_INCLUDE_DIRS} ${CPP_NETLIB_INCLUDE_DIRS})
-set_target_properties(rax-login PROPERTIES COMPILE_DEFINITIONS BOOST_NETWORK_ENABLE_HTTPS)
-target_link_libraries(rax-login ${CPP_NETLIB_LIBS})
+  PROPERTY INCLUDE_DIRECTORIES ${JSON_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR} ${CURL_INCLUDE_DIR})
+target_link_libraries(rax-login ${OPENSSL_LIBRARIES} ${CURL_LIBRARIES})
