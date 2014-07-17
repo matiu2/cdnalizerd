@@ -33,7 +33,7 @@ protected:
 public:
   CurlEasy() : handle(curl_easy_init()) {
     // Show error messages on failure
-    setOpt(CURLOPT_VERBOSE, 1);
+    setOpt(CURLOPT_VERBOSE, 0);
   }
   ~CurlEasy() { curl_easy_cleanup(handle); }
   template <typename ...T> void setOpt(CURLoption opt, T... values) const {
@@ -95,15 +95,18 @@ int main(int argc, const char *argv[]) {
 
   // Send it
   CurlEasy c;
-  std::string response;
+  std::string response_string;
   c.setOpt(CURLOPT_URL, "https://identity.api.rackspacecloud.com/v2.0/tokens");
+  //c.setOpt(CURLOPT_URL, "http://posttestserver.com/post.php");
   c.setOpt(CURLOPT_POST, 1);
   c.addHeader("Content-type: application/json");
   c.setOpt(CURLOPT_USERAGENT , "cdnalizerd 0.1");
+  c.setOpt(CURLOPT_READFUNCTION, read_callback);
+  c.setOpt(CURLOPT_POSTFIELDSIZE, req_body.str().size());
   c.setOpt(CURLOPT_READDATA, &req_body);
-  c.setOpt(CURLOPT_READFUNCTION, &read_callback);
-  c.setOpt(CURLOPT_WRITEDATA, &response);
-  c.setOpt(CURLOPT_WRITEFUNCTION, &write_callback);
+  c.setOpt(CURLOPT_WRITEFUNCTION, write_callback);
+  c.setOpt(CURLOPT_WRITEDATA, &response_string);
   c.perform();
-  std::cout << "Received: " << response << std::endl;
+  JSON response = json::read(response_string);
+  std::cout << "Token: " << response["access"]["token"]["id"] << std::endl;
 }
