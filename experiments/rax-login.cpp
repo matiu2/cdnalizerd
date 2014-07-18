@@ -27,8 +27,13 @@ struct CURLHeaders {
 };
 
 /// A create once per app, in the main curl sentry
-struct CurlGlobalSentry {
+class CurlGlobalSentry {
+private:
+  static bool exists;
+public:
   CurlGlobalSentry() {
+    assert(!exists); // There can be only one!
+    exists = true;
     CURLcode result = curl_global_init(CURL_GLOBAL_SSL);
     if (result != 0) {
       std::stringstream msg;
@@ -40,6 +45,8 @@ struct CurlGlobalSentry {
     curl_global_cleanup();
   }
 };
+
+bool CurlGlobalSentry::exists = false;
 
 class CurlEasy {
 protected:
