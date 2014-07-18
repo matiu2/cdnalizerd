@@ -26,6 +26,21 @@ struct CURLHeaders {
   }
 };
 
+/// A create once per app, in the main curl sentry
+struct CurlGlobalSentry {
+  CurlGlobalSentry() {
+    CURLcode result = curl_global_init(CURL_GLOBAL_SSL);
+    if (result != 0) {
+      std::stringstream msg;
+      msg << "Couldn't Initialize Curl Library. Error code: " << result;
+      throw std::runtime_error(std::move(msg.str()));
+    }
+  }
+  ~CurlGlobalSentry() {
+    curl_global_cleanup();
+  }
+};
+
 class CurlEasy {
 protected:
   CURLHeaders headers;
@@ -75,6 +90,7 @@ size_t read_callback(char *buffer, size_t size, size_t nitems, void *instream) {
 
 int main(int argc, const char *argv[]) {
   using namespace json;
+  CurlGlobalSentry curl;
 
   // Get the username and api key from the command line
   if (argc != 3) {
@@ -98,6 +114,7 @@ int main(int argc, const char *argv[]) {
   std::string response_string;
   c.setOpt(CURLOPT_URL, "https://identity.api.rackspacecloud.com/v2.0/tokens");
   //c.setOpt(CURLOPT_URL, "http://posttestserver.com/post.php");
+  //c.setOpt(CURLOPT_URL, "https://posttestserver.com/post.php");
   c.setOpt(CURLOPT_POST, 1);
   c.addHeader("Content-type: application/json");
   c.setOpt(CURLOPT_USERAGENT , "cdnalizerd 0.1");
