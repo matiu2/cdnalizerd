@@ -75,6 +75,8 @@ struct ConfigReader {
             config.addUsername(value);
         else if (variable == "apikey")
             config.addApikey(value);
+        else if (variable == "region")
+            config.addRegion(value);
         else if (variable == "container")
             config.addContainer(value);
         else {

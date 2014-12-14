@@ -40,18 +40,19 @@ go_bandit([](){
             AssertThat(msg, Contains("Unkown setting"));
             AssertThat(msg, Contains("on line 1"));
         });
-        it("6. knows that paths depend on containers and auth", [&] {
+        it("6. knows that paths depend on containers, regions and auth", [&] {
             std::stringstream config;
             config << "/path1 /path2";
             AssertThrows(ConfigError, read_config(config));
             std::string msg = LastException<ConfigError>().what();
-            AssertThat(msg, Equals("Need to have a valid username, apikey and container before adding a path pair"));
+            AssertThat(msg, Equals("Need to have a valid username, apikey, region and container before adding a path pair"));
         });
 
         std::string starter{R"(
             username=hello
             apikey=1234
             container=publish
+            region=SYD
         )"};
 
         it("7. Can read a simple path pair", [&] {
@@ -63,6 +64,7 @@ go_bandit([](){
             AssertThat(e.username(), Equals("hello"));
             AssertThat(e.apikey(), Equals("1234"));
             AssertThat(e.container(), Equals("publish"));
+            AssertThat(e.region(), Equals("SYD"));
             AssertThat(e.local_dir(), Equals("/source/path"));
             AssertThat(e.remote_dir(), Equals("/destination/path"));
         });
