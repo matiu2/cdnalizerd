@@ -34,30 +34,28 @@ Settings aren't processed until we hit a path line. The second setting always re
 
 Line numbers were added for clarity; don't put them into production files.
 
----- 8< ----
-1:  # My login
-2:  username=hello
-3:  apikey=1234
-4: 
-5:  # Use DFW over the servicenet
-6:  snet=true
-7:  region=DFW
-8: 
-9:  # mysite1.com
-10: container=mysite1.com
-11: /var/www/vhosts/mysite1.com/static/images /images
-12: /var/www/vhosts/mysite1.com/static/css /css
-13: 
-14: # mysites2.com
-15: container=mysite2.com
-16: /var/www/vhosts/mysite2.com/static /
-17: 
-18: # Australian site
-19: snet=false
-20: region=SYD
-21: container=mysite.com.au
-22: /var/www/vhosts/mysite.com.au/static/images /images
----- >8 ----
+    1:  # My login
+    2:  username=hello
+    3:  apikey=1234
+    4: 
+    5:  # Use DFW over the servicenet
+    6:  snet=true
+    7:  region=DFW
+    8: 
+    9:  # mysite1.com
+    10: container=mysite1.com
+    11: /var/www/vhosts/mysite1.com/static/images /images
+    12: /var/www/vhosts/mysite1.com/static/css /css
+    13: 
+    14: # mysites2.com
+    15: container=mysite2.com
+    16: /var/www/vhosts/mysite2.com/static /
+    17: 
+    18: # Australian site
+    19: snet=false
+    20: region=SYD
+    21: container=mysite.com.au
+    22: /var/www/vhosts/mysite.com.au/static/images /images
 
 So in the above example, username and api key are used for all path pairs. On line 14 container is overridden for subsequent path pair entries.
 On lines 19, 20, and 21 snet, region and container are overriden for all subsequent path pairs.
