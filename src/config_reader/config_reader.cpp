@@ -23,11 +23,14 @@ struct ConfigReader {
         string_fun::trim(line);
         if (line.empty())
             return;
-        // See if it starts with a '/'
-        if (line.front() == '/')
-            processPathLine(line);
+        if (line.front() == '#')
+          // Ignore comments
+          return;
+        else if (line.front() == '/')
+          // See if it starts with a '/'
+          processPathLine(line);
         else
-            processSettingLine(line);
+          processSettingLine(line);
     }
 
     using P = std::string::const_iterator;
@@ -79,7 +82,14 @@ struct ConfigReader {
             config.addRegion(value);
         else if (variable == "container")
             config.addContainer(value);
-        else {
+        else if (variable == "snet") {
+          if ((value == "true") || (value == "on"))
+            config.setSNet(true);
+          else if ((value == "false") || (value == "off"))
+            config.setSNet(true);
+          else
+            throw ConfigError(std::string("snet should be true/false or on/off. Not ") + value);
+        } else {
             std::stringstream msg;
             msg << "Unkown setting '" << variable
                 << "' on line " << linenum 

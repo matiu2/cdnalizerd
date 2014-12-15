@@ -1,4 +1,5 @@
 /// Logs in to rackspace and gives you a token
+#pragma once
 
 #include <jsonpp11/parse_to_json_class.hpp>
 #include <curlpp11.hpp>
@@ -48,5 +49,9 @@ struct Rackspace {
   json::JSON response;
   /// Returns true if we are logged in and have an access token
   operator bool() const { return !token.empty(); }
+  // Returns the cloud files url for the specified region
+  const std::string& cloud_files(const char *region) {
+
+  }
 };
 }

@@ -30,11 +30,16 @@ private:
     size_t apikey_index;
     size_t region_index;
     size_t container_index;
+    bool _snet;
     std::string _local_dir;
     std::string _remote_dir;
 public:
-    ConfigEntry(const Data* data, size_t username, size_t apikey, size_t region, size_t container, std::string local_dir, std::string remote_dir)
-    : data(data), username_index(username), apikey_index(apikey), region_index(region), container_index(container), _local_dir(local_dir), _remote_dir(remote_dir) {}
+  ConfigEntry(const Data *data, size_t username, size_t apikey, size_t region,
+              size_t container, std::string local_dir, std::string remote_dir,
+              bool snet)
+      : data(data), username_index(username), apikey_index(apikey),
+        region_index(region), container_index(container), _local_dir(local_dir),
+        _remote_dir(remote_dir), _snet(snet) {}
 
     // Attribute Access
     const std::string& username() const { return data->usernames[username_index]; }
@@ -43,6 +48,7 @@ public:
     const std::string& container() const { return data->containers[container_index]; }
     const std::string& local_dir() const { return _local_dir; }
     const std::string& remote_dir() const { return _remote_dir; }
+    bool snet() const { return _snet; }
 
     // To allow easy sorting
     bool operator <(const ConfigEntry& other) const {
@@ -74,19 +80,21 @@ using Entries = std::vector<ConfigEntry>
 /// Holds our configuration
 class Config : private Data {
 private:
+    bool snet = false;
     Entries entries;
 public:
     void addUsername(std::string username) { usernames.push_back(username); }
     void addApikey(std::string apikey) { apikeys.push_back(apikey); }
     void addRegion(std::string region) { regions.push_back(region); }
     void addContainer(std::string container) { containers.push_back(container); }
+    void setSNet(bool new_val) { snet = new_val; } /// Toggles service net on and off
     void addEntry(std::string local_dir, std::string remote_dir) {
         if ((usernames.size() == 0) ||
             (apikeys.size() == 0) ||
             (regions.size() == 0) ||
             (containers.size() == 0))
             throw ConfigError("Need to have a valid username, apikey, region and container before adding a path pair");
-        entries.push_back({this, usernames.size()-1, apikeys.size()-1, regions.size()-1, containers.size()-1, local_dir, remote_dir});
+        entries.push_back({this, usernames.size()-1, apikeys.size()-1, regions.size()-1, containers.size()-1, local_dir, remote_dir, snet});
     }
 
     Config() = default;
