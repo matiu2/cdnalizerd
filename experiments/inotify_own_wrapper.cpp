@@ -90,7 +90,7 @@ int main(int argc, char** argv)
   if (argc == 2)
     dir = argv[1];
   inotify::Instance inotify;
-  auto watch = inotify.add_watch(dir, IN_ALL_EVENTS);
+  auto& watch = inotify.add_watch(dir.c_str(), IN_ALL_EVENTS);
 
   return 0;
 }
