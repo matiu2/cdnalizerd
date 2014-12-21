@@ -8,6 +8,8 @@ add_executable(locale locale.cpp)
 
 add_executable(utf8 utf8.cpp)
 
+add_executable(inotify_own_wrapper inotify_own_wrapper.cpp)
+
 add_executable(rax-login rax-login.cpp)
 add_dependencies(rax-login curlpp11)
 set_property(
