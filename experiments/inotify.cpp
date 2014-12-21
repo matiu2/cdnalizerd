@@ -13,14 +13,17 @@
 
 using namespace std;
 
-int main(void)
+int main(int argc, char** argv)
 {
     string watch_dir = "/tmp";
+    if (argc == 2)
+      watch_dir = argv[1];
 
     try {
         Inotify notify;
 
-        InotifyWatch watch(watch_dir, IN_ALL_EVENTS);
+        InotifyWatch watch(watch_dir, IN_CLOSE_WRITE | IN_DELETE |
+                                          IN_MOVED_FROM | IN_MOVED_TO);
         notify.Add(watch);
 
         cout << "Watching directory " << watch_dir << endl << endl;

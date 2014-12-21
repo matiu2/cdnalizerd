@@ -49,9 +49,5 @@ struct Rackspace {
   json::JSON response;
   /// Returns true if we are logged in and have an access token
   operator bool() const { return !token.empty(); }
-  // Returns the cloud files url for the specified region
-  const std::string& cloud_files(const char *region) {
-
-  }
 };
 }
