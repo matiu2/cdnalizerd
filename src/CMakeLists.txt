@@ -2,7 +2,7 @@ project(src)
 
 add_subdirectory(config_reader)
 
-include_directories(${CURL_INCLUDE_DIRS} ${CURLPP11_SOURCE_DIR} ${JSON_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR}  ${INOTIFY_SOURCE_DIR})
+include_directories(${CURL_INCLUDE_DIRS} ${CURLPP11_SOURCE_DIR} ${JSON_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR}  ${INOTIFY_SOURCE_DIR} ${JSONPP11_SOURCE_DIR})
 
 add_executable(test_login test_login.cpp ${CURLPP11_FILE})
 add_dependencies(test_login jsonpp11)
@@ -14,5 +14,5 @@ set_property(
   PROPERTY INCLUDE_DIRECTORIES ${BANDIT_INCLUDE_DIR})
 add_test(test_login test_login)
 
-add_executable(cdnalizerd main.cpp ${INOTIFY_SOURCE_FILE} ${CURLPP11_FILE})
+add_executable(cdnalizerd main.cpp utils.cpp ${INOTIFY_SOURCE_FILE} ${CURLPP11_FILE})
 target_link_libraries(cdnalizerd config_reader ${OPENSSL_LIBRARIES} ${CURL_LIBRARIES})

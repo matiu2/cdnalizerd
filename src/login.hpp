@@ -1,7 +1,7 @@
 /// Logs in to rackspace and gives you a token
 #pragma once
 
-#include <jsonpp11/parse_to_json_class.hpp>
+#include <parse_to_json_class.hpp>
 #include <curlpp11.hpp>
 
 #include <stdexcept>

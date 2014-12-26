@@ -44,6 +44,7 @@ ExternalProject_Add(jsonpp11
     UPDATE_COMMAND "" # Skip annoying updates for every build
     INSTALL_COMMAND ""
 )
+SET(JSONPP11_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/jsonpp11/src)
 
 
 ## curlpp11 - CURL wrapper

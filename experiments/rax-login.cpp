@@ -5,7 +5,7 @@
 #include <iterator>
 #include <algorithm>
 
-#include <jsonpp11/parse_to_json_class.hpp>
+#include <parse_to_json_class.hpp>
 #include <curlpp11.hpp>
 
 using namespace json;
