@@ -22,7 +22,7 @@ int main(int argc, char** argv)
     try {
         Inotify notify;
 
-        InotifyWatch watch(watch_dir, IN_CLOSE_WRITE | IN_DELETE |
+        InotifyWatch watch(watch_dir, IN_ALL_EVENTS | IN_CLOSE_WRITE | IN_DELETE |
                                           IN_MOVED_FROM | IN_MOVED_TO);
         notify.Add(watch);
 

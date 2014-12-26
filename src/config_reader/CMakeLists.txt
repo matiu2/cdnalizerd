@@ -17,7 +17,10 @@ add_test(test_dequote_double_escape test_string_functions --only=2.3)
 add_test(test_dequote_de-escapes_x test_string_functions --only=2.4)
 add_test(test_dequote_escapes_quote test_string_functions --only=2.5)
 
+add_library(config_reader config_reader.cpp string_functions.cpp)
+
 ADD_DEFINITIONS( -fno-access-control ) # Helps us access private methods in functions
-add_executable(test_config_reader test_config_reader.cpp config_reader.cpp string_functions.cpp)
+add_executable(test_config_reader test_config_reader.cpp)
+target_link_libraries(test_config_reader config_reader)
 add_dependencies(test_config_reader bandit)
 add_test(test_config_reader_all test_config_reader)

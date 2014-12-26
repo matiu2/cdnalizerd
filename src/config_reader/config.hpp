@@ -25,6 +25,7 @@ struct Data {
 /// Holds a single mapping from a local folder to remote location
 class ConfigEntry {
 private:
+    friend class Config;
     const Data* data;
     size_t username_index;
     size_t apikey_index;
@@ -81,7 +82,7 @@ using Entries = std::vector<ConfigEntry>
 class Config : private Data {
 private:
     bool snet = false;
-    Entries entries;
+    Entries _entries;
 public:
     void addUsername(std::string username) { usernames.push_back(username); }
     void addApikey(std::string apikey) { apikeys.push_back(apikey); }
@@ -94,28 +95,28 @@ public:
             (regions.size() == 0) ||
             (containers.size() == 0))
             throw ConfigError("Need to have a valid username, apikey, region and container before adding a path pair");
-        entries.push_back({this, usernames.size()-1, apikeys.size()-1, regions.size()-1, containers.size()-1, local_dir, remote_dir, snet});
+        _entries.push_back({this, usernames.size()-1, apikeys.size()-1, regions.size()-1, containers.size()-1, local_dir, remote_dir, snet});
     }
 
     Config() = default;
 
-    Config(const Config& other) : Data(other), entries(other.entries) {
+    Config(const Config& other) : Data(other), _entries(other._entries) {
         // Update our entries to recognize us as the parent now
-        for (auto& e : entries)
+        for (auto& e : _entries)
             e.data = this;
     }
 
-    Config(Config&& other) : Data(other), entries(other.entries) {
+    Config(Config&& other) : Data(other), _entries(other._entries) {
         // Update our entries to recognize us as the parent now
-        for (auto& e : entries)
+        for (auto& e : _entries)
             e.data = this;
-        other.entries.clear();
+        other._entries.clear();
     }
 
     Config& operator=(const Config& other) {
         Data::operator=(other);
-        entries = other.entries;
-        for (auto& e : entries)
+        _entries = other._entries;
+        for (auto& e : _entries)
             e.data = this;
         return *this;
     }
@@ -123,29 +124,30 @@ public:
 
     /// Makes the config ready for use
     const Config& use() {
-        std::sort(entries.begin(), entries.end());
+        std::sort(_entries.begin(), _entries.end());
         #ifndef NDEBUG
-        entries.dirty = false;
+        _entries.dirty = false;
         #endif
         return *this;
     }
 
     const ConfigEntry& getEntryByPath(const std::string& path) const {
         #ifndef NDEBUG
-        assert(!entries.dirty);
+        assert(!_entries.dirty);
         #endif
-        auto found = std::lower_bound(entries.cbegin(), entries.cend(), path);
-        if (found != entries.cend())
+        auto found = std::lower_bound(_entries.cbegin(), _entries.cend(), path);
+        if (found != _entries.cend())
             return *found;
         else {
             std::stringstream msg;
             msg << "Couldn't find "
                 << path << " in this list: ";
-            for (auto& e : entries)
+            for (auto& e : _entries)
                 msg << e.local_dir() << ", ";
             throw std::logic_error(msg.str());
         }
     }
+    const Entries& entries() const { return _entries; }
 };
 
 }

@@ -1,7 +1,6 @@
 project(experiments)
 
-add_executable(inotify inotify.cpp)
-target_link_libraries(inotify inotify_lib)
+add_executable(inotify inotify.cpp ${INOTIFY_SOURCE_FILE})
 set_target_properties(inotify PROPERTIES INCLUDE_DIRECTORIES ${INOTIFY_SOURCE_DIR})
 
 add_executable(locale locale.cpp)

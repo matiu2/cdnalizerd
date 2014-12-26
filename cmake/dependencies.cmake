@@ -31,7 +31,6 @@ add_custom_command(
     OUTPUT ${INOTIFY_SOURCE_FILE}
     DEPENDS inotify_cxx
 )
-add_library(inotify_lib STATIC ${INOTIFY_SOURCE_FILE})
 
 ## jsonpp11 - JSON wrapper
 
@@ -63,5 +62,4 @@ ExternalProject_Add(curlpp11
     INSTALL_COMMAND ""
 )
 SET(CURLPP11_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/curlpp11/src)
-find_library(curlpp11_lib curlpp11)
-#set_property( TARGET curlpp11 APPEND PROPERTY INCLUDE_DIRECTORIES ${OPENSSL_INCLUDE_DIR} ${CURL_INCLUDE_DIR})
+set(CURLPP11_FILE ${CURLPP11_SOURCE_DIR}/curlpp11.cpp)
