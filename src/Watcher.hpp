@@ -30,22 +30,14 @@ struct WatchGroup {
 struct Watcher {
 private:
   std::map<std::string, Rackspace> logins; // maps username to login
+  std::vector<InotifyWatch> watches;
   const Config& config;
   std::vector<WatchGroup> groups;
   Inotify notify;
-  void readConfig(const Config& config) {
-    for (const auto &entry : config.entries()) {
-      Rackspace& login = logins[entry.username()];
-      if (!login)
-        login.login(entry.username(), entry.apikey());
-      InotifyWatch watch(entry.local_dir(), IN_ALL_EVENTS | IN_CLOSE_WRITE |
-                                                IN_DELETE | IN_MOVED_FROM |
-                                                IN_MOVED_TO);
-      notify.Add(watch);
-    }
-  }
+  void readConfig();
 public:
   Watcher(Config &config) : config(config.use()) {}
+  void watch();
 };
 
 }

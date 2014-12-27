@@ -17,12 +17,13 @@ int main(int argc, char** argv)
   // See if we have a --config_file option
   std::string config_file_name = "/etc/cdnalizerd.conf";
   if (argc == 3)
-    if (std::string(argv[2]) == "--config_file")
-      config_file_name = argv[3];
+    if (std::string(argv[1]) == "--config_file")
+      config_file_name = argv[2];
   std::ifstream config_file(config_file_name);
   Config config = read_config(config_file);
   config_file.close();
   // Start watching dirs
   Watcher watcher(config);
+  watcher.watch();
   return 0;
 }
