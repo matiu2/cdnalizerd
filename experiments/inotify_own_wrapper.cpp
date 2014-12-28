@@ -120,6 +120,7 @@ int main(int argc, char** argv)
     dir = argv[1];
   inotify::Instance inotify;
   auto& watch = inotify.add_watch(dir.c_str(), IN_ALL_EVENTS);
+  // TODO: Wait for watches, then act on them
 
   return 0;
 }

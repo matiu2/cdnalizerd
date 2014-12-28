@@ -1,0 +1,6 @@
+#!/bin/sh
+# To install: ln -s ../../pre-commit .git/hooks/pre-commit
+cd $GIT_DIR/..
+sh ./git-commit-hook.sh
+git add TODO-source.sh
+cd -
