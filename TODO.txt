@@ -1,3 +1,23 @@
+# Todo
+
+## Watcher
+
+* Have rename show the full paths
+* Watch sub dirs that are mv'd in from outside
+
+## General
+
+* Light scan - compares file lists to those on the server. Can be run every hour
+* Medium scan - compares file mtimes to server metadata - Called on startup
+* Deep scan - compares file MD5s to those on the server - only called on demand (probably through a signal)
+* Heartbeat - When in a glusterfs setup, communicate with other daemons, to spread the load and not double up on work.
+
+## RS API
+
+* Store mtimes and checksums in the file metadata
 * Add AuthURL config file setting
+
+# Done
+
 * Add config reader tests - DONE
 * experiment with rax-login - DONE

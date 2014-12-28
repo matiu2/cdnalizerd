@@ -31,10 +31,16 @@ struct Watcher {
 private:
   std::map<std::string, Rackspace> logins; // maps username to login
   std::vector<InotifyWatch> watches;
+  std::map<uint32_t, std::string> cookies;
   const Config& config;
   std::vector<WatchGroup> groups;
   Inotify notify;
   void readConfig();
+  void watchNewDir(const char* path);
+  void onFileSaved(std::string);
+  void onDirCreated(std::string);
+  void onFileRenamed(std::string, std::string);
+  void onFileRemoved(std::string);
 public:
   Watcher(Config &config) : config(config.use()) {}
   void watch();
