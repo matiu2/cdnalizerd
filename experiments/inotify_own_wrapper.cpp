@@ -10,6 +10,7 @@
 #include <map>
 #include <string>
 #include <functional>
+#include <iostream>
 
 namespace inotify {
 
@@ -68,6 +69,37 @@ struct Event {
     uint32_t cookie;   /* Unique cookie associating related
                           events (for rename(2)) */
     std::string name;
+    
+    /* Events we can watch for */
+    bool wasAccessed() const { return mask & IN_ACCESS; }
+    bool wasModified() const { return mask & IN_MODIFY; }
+    bool wasChanged() const { return mask & IN_ATTRIB; }
+    bool wasSaved() const { return mask & IN_CLOSE_WRITE; }
+    bool wasClosedWithoutSave() const { return mask & IN_CLOSE_NOWRITE; }
+    bool wasOpened() const { return mask & IN_OPEN; }
+    bool wasMovedFrom() const { return mask & IN_MOVED_FROM; }
+    bool wasMovedTo() const { return mask & IN_MOVED_TO; }
+    bool wasCreated() const { return mask & IN_CREATE; }
+    bool wasDeleted() const { return mask & IN_DELETE; }
+    bool wasDeletedSelf() const { return mask & IN_DELETE_SELF; } // This means our actual directory was deleted
+    bool wasMovedSelf() const { return mask & IN_MOVE_SELF; } // TODO: Test if we need to re-set up watches after *self* was moved
+
+    /* Events we get wether we like it or not  */
+    bool wasUnmounted() const { return mask & IN_UNMOUNT; }
+    bool wasOverflowed() const { return mask & IN_Q_OVERFLOW; }
+    bool wasIgnored() const { return mask & IN_IGNORED; }
+
+    /* Helper events */
+    bool wasClose() const { return mask & IN_CLOSE; } /// File was closed (could have been written or not)
+    bool wasMoved() const { return mask & IN_MOVE; }  /// File was moved, either from or to
+
+    /* special flags */
+    bool onlyIfDir() const { return mask & IN_ONLYDIR; }
+    bool dontFollow() const { return mask & IN_DONT_FOLLOW; }
+    bool excludeEventsOnUnlinkedObjects() const { return mask & IN_EXCL_UNLINK; }
+    bool addToTheMask() const { return mask & IN_MASK_ADD; }
+    bool isDir() const { return mask & IN_ISDIR; }
+    bool oneShot() const { return mask & IN_ONESHOT; }
 };
 
 /// Fire it up to init the inotify queue
@@ -120,7 +152,14 @@ int main(int argc, char** argv)
     dir = argv[1];
   inotify::Instance inotify;
   auto& watch = inotify.add_watch(dir.c_str(), IN_ALL_EVENTS);
-  // TODO: Wait for watches, then act on them
+  while (true) {
+    auto events = inotify.waitForEvents();
+    for (auto& e : events)
+      std::cout << "EVENT: " << e.name << std::endl;
+  }
+
+
+
 
   return 0;
 }
