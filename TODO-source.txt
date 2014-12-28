@@ -1,0 +1,3 @@
+src/Watcher.cpp:59:          // TODO: If it was a dir, stop watching it and all its sub dirs
+src/Watcher.cpp:75:            // TODO: If it is a dir, recursively follow it
+experiments/inotify_own_wrapper.cpp:93:    constexpr int buf_size = 1024; // TODO: Work out a better number. Maybe put it in the config
