@@ -37,6 +37,7 @@ void Watcher::watch() {
       if (cookies.size() > 0)
         for (auto& cookie : cookies)
           onFileRemoved(cookie.second);
+      cookies.clear();
       notify.WaitForEvents();
       int count = notify.GetEventCount();
       do {
@@ -44,28 +45,39 @@ void Watcher::watch() {
         notify.GetEvent(event);
         std::string name;
         event.GetName(name);
+        auto path = event.GetWatch()->GetPath();
+        joinPaths(path, name);
         std::cout << "EVENT" << std::endl;
-        if (event.IsType(IN_CLOSE_WRITE))
-          onFileSaved(name);
-        else if (event.IsType(IN_CREATE) && event.IsType(IN_ISDIR)) {
-          auto path = event.GetWatch()->GetPath();
-          joinPaths(path, name.c_str());
+        if (event.IsType(IN_CLOSE_WRITE)) {
+          // A file has just been saved
+          onFileSaved(path);
+        } else if (event.IsType(IN_CREATE) && event.IsType(IN_ISDIR)) {
+          // A new directory was created
           watchNewDir(path.c_str());
-        } else if (event.IsType(IN_DELETE))
-          onFileRemoved(name);
-        else if (event.IsType(IN_MOVED_FROM)) {
-          cookies.insert(std::make_pair(event.GetCookie(), name));
-          std::cout << "Moved From " << event.GetCookie() << ' ' << name << std::endl;
+        } else if (event.IsType(IN_DELETE)) {
+          // A file or directory was deleted
+          // TODO: If it was a dir, stop watching it and all its sub dirs
+          onFileRemoved(path);
+        } else if (event.IsType(IN_MOVED_FROM)) {
+          // A file or dir was moved somewhere
+          // The move operation generates a cookie that we can use later to tell if it landed back in our tree
+          cookies.insert(std::make_pair(event.GetCookie(), path));
+          std::cout << "Moved From " << event.GetCookie() << ' ' << path << std::endl;
         } else if (event.IsType(IN_MOVED_TO)) {
+          // A file or dir move has completed
           auto found = cookies.find(event.GetCookie());
           if (found != cookies.end()) {
-            onFileRenamed(found->second, name);
+            // The move operation started in our tree, so this is a rename for cloud files
+            onFileRenamed(found->second, path);
             cookies.erase(found);
           } else {
-            onFileSaved(name);
+            // The move operation originated else where so this is a create for cloud files
+            // TODO: If it is a dir, recursively follow it
+            onFileSaved(path);
           }
-        } else if (event.IsType(IN_DELETE_SELF))
-          std::cout << "Delete self " << name << std::endl;
+        } else if (event.IsType(IN_DELETE_SELF)) {
+          std::cout << "Delete self " << path << std::endl;
+        }
       } while (--count);
     } catch (InotifyException &e) {
       std::cerr << e.GetMessage() << std::endl;
