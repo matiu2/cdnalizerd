@@ -1,6 +1,10 @@
 # CDNAlizerD
 
-Watches directories and synchronizes changes to the file system to Rackspace Cloud Files
+Watches directories and synchronizes changes to the file system to Rackspace Cloud Files. Like lsyncd but lsyncs to cloud files.
+
+**Development currently on hold**
+
+I don't think there's enough demand for this. If wish that it existed, let me know via github message (matiu2). If I get any interest at all, I'll start working on it again.
 
 ## Config file
 
