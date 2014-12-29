@@ -29,8 +29,7 @@ std::string getContainerUrl(const Rackspace &login, const ConfigEntry &config) {
     throw std::runtime_error(
         std::string("Unable to find url for cloud files region: ") +
         config.region());
-  joinPaths(url, config.container());
-  joinPaths(url, config.remote_dir());
+  url = joinPaths(joinPaths(url, config.container()), config.remote_dir());
   return url;
 }
 
@@ -66,12 +65,14 @@ void walkDir(const char* path, std::function<void(const char*)> callback) {
   }
 }
 
-void joinPaths(std::string& base, const std::string& extra) {
-    if (base.back() != '/')
-      base.append("/");
-    base.append(extra);
-    if (base.back() != '/')
-      base.append("/");
+std::string oinPaths(const std::string &base, const std::string &extra) {
+  auto out = base;
+  if (out.back() != '/')
+    out.append("/");
+  out.append(extra);
+  if (out.back() != '/')
+    out.append("/");
+  return out;
 }
 
 }

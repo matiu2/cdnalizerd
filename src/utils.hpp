@@ -15,6 +15,6 @@ bool isDir(const char* path);
 void walkDir(const char* path, std::function<void(const char*)> callback);
 
 /// Joins two urls with exactly one path separator
-void joinPaths(std::string& base, const std::string& extra);
+std::string joinPaths(const std::string& base, const std::string& extra);
 
 }

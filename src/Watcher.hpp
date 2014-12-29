@@ -14,7 +14,7 @@
 
 #include "config_reader/config.hpp"
 #include "login.hpp"
-#include "inotify-cxx.h" // Brought from build/3rd_party/src/inotify... by cmake
+#include "inotify.hpp" // Brought from build/3rd_party/src/inotify... by cmake
 #include "utils.hpp"
 
 #include <map>
@@ -30,7 +30,7 @@ struct WatchGroup {
 struct Watcher {
 private:
   std::map<std::string, Rackspace> logins; // maps username to login
-  std::vector<InotifyWatch> watches;
+  inotify::Instance inotify;
   std::map<uint32_t, std::string> cookies;
   const Config& config;
   std::vector<WatchGroup> groups;
