@@ -21,7 +21,7 @@ private:
   }
 
 public:
-  const char *path;
+  std::string path;
   Watch(int inotify_handle, const char *path, uint32_t mask)
       : inotify_handle(inotify_handle),
         _handle(inotify_add_watch(inotify_handle, path, mask)), path(path) {
@@ -62,14 +62,24 @@ public:
 
 /// An event that happened to a file
 struct Event {
-  Watch &watch;
+  using GetWatch = std::function<const Watch &(void)>;
+  GetWatch watch; // Is filled in in waitForEvents
+  int watch_handle;
   uint32_t mask;   /* Mask of events */
   uint32_t cookie; /* Unique cookie associating related
                       events (for rename(2)) */
   std::string name;
 
+  Event(GetWatch watch, int watch_handle, uint32_t mask, uint32_t cookie,
+        const char *namePtr, int nameLen)
+      : watch(watch), watch_handle(watch_handle), mask(mask), cookie(cookie) {
+    name.reserve(nameLen);
+    std::copy(namePtr, &namePtr[nameLen], std::back_inserter(name));
+  }
+
   std::string path() const {
-    auto out = watch.path;
+    const auto& w = watch();
+    auto out = w.path;
     cdnalizerd::joinPaths(out, name);
     return out;
   }
@@ -117,12 +127,16 @@ struct Event {
 /// A collection of Watches
 struct Instance {
   int handle;
+  // Watch handle to watcher lookup
   std::map<int, Watch> watches;
-  // Path to watch handle
+  // Path to watcher handle lookup
   std::map<std::string, int> paths;
   Instance() : handle(inotify_init()) {
     if (handle == -1)
       throw std::system_error(errno, std::system_category());
+  }
+  const Watch& watchFromHandle(int handle) {
+    return watches.at(handle);
   }
   Watch &addWatch(const char *path, uint32_t mask) {
     auto found = paths.find(path);
@@ -154,27 +168,29 @@ struct Instance {
     return (found != paths.end());
   }
   std::vector<Event> waitForEvents() {
-    int len;
-    constexpr int buf_size =
-        1024; // TODO: Work out a better number. Maybe put it in the config
+    // TODO: Work out a better number. Maybe put it in the config
+    constexpr int max_event_count = 20;
+    constexpr int buf_size = max_event_count * sizeof(inotify_event);
+    static_assert(buf_size < SSIZE_MAX, "http://linux.die.net/man/2/read would "
+                                        "give undefined behaviour if "
+                                        "'buf_size' is too big");
     char events[buf_size];
     // This is where the program will pause, until a signal is received (and
     // errno=EINTR) or a file is changed
     // This is the glibc read function
-    len = read(handle, events, buf_size);
+    int len = read(handle, events, buf_size);
     if (len == -1)
       throw std::system_error(errno, std::system_category());
     std::vector<Event> result;
-    inotify_event *event = reinterpret_cast<inotify_event *>(events);
-    while (reinterpret_cast<void *>(event) < events + len) {
-      result.emplace_back(
-          Event{watches.at(event->wd), event->mask, event->cookie});
-      Event &out = result.back();
-      out.name.reserve(event->len);
-      std::copy(event->name, &event->name[event->len],
-                std::back_inserter(out.name));
-      // Get the next event
-      event += sizeof(inotify_event) + event->len;
+    char* loc = events;
+    while (loc < events + len) {
+      inotify_event* event = (inotify_event*)loc;
+      int handle = event->wd;
+      result.emplace_back(Event([ handle, this ]() -> const Watch &
+                                { return watches.at(handle); },
+                                handle, event->mask, event->cookie, event->name,
+                                event->len));
+      loc += event->len + sizeof(inotify_event);
     }
     return result;
   }

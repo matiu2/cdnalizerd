@@ -38,7 +38,7 @@ void Watcher::watch() {
         for (auto &cookie : cookies)
           onFileRemoved(cookie.second);
       cookies.clear();
-      for (auto &event : inotify.waitForEvents()) {
+      for (const auto &event : inotify.waitForEvents()) {
         auto path = event.path();
         std::cout << "EVENT" << std::endl;
         if (event.wasSaved()) {
