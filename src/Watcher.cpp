@@ -47,19 +47,13 @@ void Watcher::watch() {
           // A new directory was created
           watchNewDir(path.c_str());
         } else if (event.wasDeleted()) {
-          if (event.wasSelfDeleted()) {
-            std::cout << "Delete self " << path << std::endl;
-          } else {
-            // A file or directory was deleted
-            onFileRemoved(path);
-          }
+          // A file or directory was deleted
+          onFileRemoved(path);
         } else if (event.wasMovedFrom()) {
           // A file or dir was moved somewhere
           // The move operation generates a cookie that we can use later to tell
           // if it landed back in our tree
           cookies.insert(std::make_pair(event.cookie, path));
-          std::cout << "Moved From " << event.cookie << ' ' << path
-                    << std::endl;
         } else if (event.wasMovedTo()) {
           // A file or dir move has completed
           auto found = cookies.find(event.cookie);

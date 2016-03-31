@@ -1,6 +1,4 @@
-src/Watcher.cpp:55:            // TODO: If it was a dir, stop watching it and all its sub dirs
-src/Watcher.cpp:76:            // TODO: If it is a dir, recursively follow it
-src/inotify.hpp:103:  } // TODO: Test if we need to re-set up watches after *self* was moved
-src/inotify.hpp:171:    // TODO: Work out a better number. Maybe put it in the config
+src/inotify.hpp:102:  } // TODO: Test if we need to re-set up watches after *self* was moved
+src/inotify.hpp:170:    // TODO: Work out a better number. Maybe put it in the config
 experiments/inotify_own_wrapper.cpp:91:  } // TODO: Test if we need to re-set up watches after *self* was moved
 experiments/inotify_own_wrapper.cpp:137:        1024; // TODO: Work out a better number. Maybe put it in the config
