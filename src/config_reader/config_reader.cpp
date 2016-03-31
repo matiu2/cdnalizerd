@@ -89,6 +89,13 @@ struct ConfigReader {
             config.setSNet(true);
           else
             throw ConfigError(std::string("snet should be true/false or on/off. Not ") + value);
+        } else if (variable == "move") {
+          if ((value == "true") || (value == "on"))
+            config.setMove(true);
+          else if ((value == "false") || (value == "off"))
+            config.setMove(true);
+          else
+            throw ConfigError(std::string("move should be true/false or on/off. Not ") + value);
         } else {
             std::stringstream msg;
             msg << "Unkown setting '" << variable

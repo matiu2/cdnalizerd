@@ -13,6 +13,8 @@ namespace cdnalizerd {
  *  username=xx
  *  key=yyy
  *  container=zzz
+ *  snet=off
+ *  move=on
  *  /local/path /remote/path
  *
  *  The settings lines affect all lines below them.
