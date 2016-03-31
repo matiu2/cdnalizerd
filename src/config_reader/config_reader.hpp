@@ -25,9 +25,9 @@ namespace cdnalizerd {
  *  container=container2
  *  "/local/path with spaces" "/remote/path with spaces"
  *
- *  The last path will be in container2 instead of zzz, but will use the same auth settings
+ *  The last path will be in container2 instead of zzz, but will use the same
+ *auth settings
  *
- **/ 
-Config read_config(std::istream& in);
-
+ **/
+Config read_config(std::istream &in);
 }

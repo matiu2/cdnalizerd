@@ -13,49 +13,48 @@
 
 using namespace std;
 
-int main(int argc, char** argv)
-{
-    string watch_dir = "/tmp";
-    if (argc == 2)
-      watch_dir = argv[1];
+int main(int argc, char **argv) {
+  string watch_dir = "/tmp";
+  if (argc == 2)
+    watch_dir = argv[1];
 
-    try {
-        Inotify notify;
+  try {
+    Inotify notify;
 
-        InotifyWatch watch(watch_dir, IN_ALL_EVENTS | IN_CLOSE_WRITE | IN_DELETE |
-                                          IN_MOVED_FROM | IN_MOVED_TO);
-        notify.Add(watch);
+    InotifyWatch watch(watch_dir, IN_ALL_EVENTS | IN_CLOSE_WRITE | IN_DELETE |
+                                      IN_MOVED_FROM | IN_MOVED_TO);
+    notify.Add(watch);
 
-        cout << "Watching directory " << watch_dir << endl << endl;
-        for (;;) {
-            notify.WaitForEvents();
+    cout << "Watching directory " << watch_dir << endl << endl;
+    for (;;) {
+      notify.WaitForEvents();
 
-            size_t count = notify.GetEventCount();
-            while (count > 0) {
-                InotifyEvent event;
-                bool got_event = notify.GetEvent(&event);
+      size_t count = notify.GetEventCount();
+      while (count > 0) {
+        InotifyEvent event;
+        bool got_event = notify.GetEvent(&event);
 
-                if (got_event) {
-                    string mask_str;
-                    event.DumpTypes(mask_str);
+        if (got_event) {
+          string mask_str;
+          event.DumpTypes(mask_str);
 
-                    string filename = event.GetName();
+          string filename = event.GetName();
 
-                    cout << "[watch " << watch_dir << "] ";
-                    cout << "event mask: \"" << mask_str << "\", ";
-                    cout << "filename: \"" << filename << "\"" << endl;
-                }
-
-                count--;
-            }
+          cout << "[watch " << watch_dir << "] ";
+          cout << "event mask: \"" << mask_str << "\", ";
+          cout << "filename: \"" << filename << "\"" << endl;
         }
-    } catch (InotifyException &e) {
-        cerr << "Inotify exception occured: " << e.GetMessage() << endl;
-    } catch (exception &e) {
-        cerr << "STL exception occured: " << e.what() << endl;
-    } catch (...) {
-        cerr << "unknown exception occured" << endl;
-    }
 
-    return 0;
+        count--;
+      }
+    }
+  } catch (InotifyException &e) {
+    cerr << "Inotify exception occured: " << e.GetMessage() << endl;
+  } catch (exception &e) {
+    cerr << "STL exception occured: " << e.what() << endl;
+  } catch (...) {
+    cerr << "unknown exception occured" << endl;
+  }
+
+  return 0;
 }

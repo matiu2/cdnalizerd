@@ -38,7 +38,7 @@ bool isDir(const char *path) {
   return (stat(path, &sb) == 0) && (S_ISDIR(sb.st_mode));
 }
 
-bool isDir(dirent* entry) {
+bool isDir(dirent *entry) {
   bool is_dir = entry->d_type == DT_DIR;
   // Some filesystmes need to use stat to find out if it's a dir or not
   if (!is_dir && (entry->d_type == DT_UNKNOWN))
@@ -46,7 +46,7 @@ bool isDir(dirent* entry) {
   return is_dir;
 }
 
-void walkDir(const char* path, std::function<void(const char*)> callback) {
+void walkDir(const char *path, std::function<void(const char *)> callback) {
   assert(isDir(path));
   auto dir = opendir(path);
   if (!dir)
@@ -57,7 +57,8 @@ void walkDir(const char* path, std::function<void(const char*)> callback) {
     if (entry == nullptr)
       break;
     if (isDir(entry)) {
-      if ((strcmp(entry->d_name, ".") == 0) && (strcmp(entry->d_name, "..") == 0)) {
+      if ((strcmp(entry->d_name, ".") == 0) &&
+          (strcmp(entry->d_name, "..") == 0)) {
         callback(entry->d_name);
         walkDir(entry->d_name, callback);
       }
@@ -74,5 +75,4 @@ std::string joinPaths(const std::string &base, const std::string &extra) {
     out.append("/");
   return out;
 }
-
 }

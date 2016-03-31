@@ -11,8 +11,7 @@
 
 using namespace cdnalizerd;
 
-int main(int argc, char** argv)
-{
+int main(int argc, char **argv) {
   curl::GlobalSentry curl;
   // See if we have a --config_file option
   std::string config_file_name = "/etc/cdnalizerd.conf";

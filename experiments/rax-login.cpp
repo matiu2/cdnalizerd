@@ -33,13 +33,13 @@ int main(int argc, const char *argv[]) {
 
   // Send it
   curl::Easy c;
-    c.url("https://identity.api.rackspacecloud.com/v2.0/tokens")
-    .header("Content-type: application/json")
-    .userAgent("cdnalizerd 0.1")
-    .POST()
-    .setOpt(CURLOPT_VERBOSE, false)
-    .customBody(req_body)
-    .perform(response_string);
+  c.url("https://identity.api.rackspacecloud.com/v2.0/tokens")
+      .header("Content-type: application/json")
+      .userAgent("cdnalizerd 0.1")
+      .POST()
+      .setOpt(CURLOPT_VERBOSE, false)
+      .customBody(req_body)
+      .perform(response_string);
   JSON response = readValue(response_string.begin(), response_string.end());
   std::cout << "Token: " << response["access"]["token"]["id"] << std::endl;
 }

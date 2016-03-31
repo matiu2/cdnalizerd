@@ -12,10 +12,12 @@ using namespace cdnalizerd;
 
 std::pair<std::string, std::string> getCredentials() {
   // Get user's home directory
-  char* username = std::getenv("OS_USERNAME");
-  char* password = std::getenv("OS_PASSWORD");
+  char *username = std::getenv("OS_USERNAME");
+  char *password = std::getenv("OS_PASSWORD");
   if ((username == nullptr) || (password == nullptr))
-    throw std::runtime_error("Unable to login, please add the environment varables. eg.\nOS_USERNAME=abc\nOS_PASSWORD=5320203405430");
+    throw std::runtime_error("Unable to login, please add the environment "
+                             "varables. "
+                             "eg.\nOS_USERNAME=abc\nOS_PASSWORD=5320203405430");
   return std::make_pair(username, password);
 }
 

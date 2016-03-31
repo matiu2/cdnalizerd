@@ -22,7 +22,7 @@ struct Rackspace {
   json::JSON response;
   /// Returns true if we are logged in and have an access token
   operator bool() const { return !token.empty(); }
-  void login(const std::string& username, const std::string& apikey) {
+  void login(const std::string &username, const std::string &apikey) {
     using namespace json;
     // Create the request
     JSON j(JMap{
@@ -44,10 +44,12 @@ struct Rackspace {
     try {
       token = response.at("access").at("token").at("id");
     } catch (std::out_of_range) {
-      throw LoginFailed(std::string("Couldn't get access token. Response: ") + response_string);
+      throw LoginFailed(std::string("Couldn't get access token. Response: ") +
+                        response_string);
     }
     if (token.empty())
-      throw LoginFailed(std::string("Empty access token. Response: ") + response_string);
+      throw LoginFailed(std::string("Empty access token. Response: ") +
+                        response_string);
   }
 };
 }

@@ -81,11 +81,10 @@ go_bandit([]() {
 
     it("8. Knows about service_net", [&] {
       std::stringstream config;
-      config << starter << std::endl
-             << "/source/path /destination/path" << std::endl
-             << "# Now we'll try with snet" << std::endl
-             << "snet=true" << std::endl
-             << "/source/path2 /destination/path2" << std::endl;
+      config << starter << std::endl << "/source/path /destination/path"
+             << std::endl << "# Now we'll try with snet" << std::endl
+             << "snet=true" << std::endl << "/source/path2 /destination/path2"
+             << std::endl;
       Config c = read_config(config);
       const ConfigEntry &e = c.getEntryByPath("/source/path");
       AssertThat(e.username(), Equals("hello"));
@@ -95,7 +94,7 @@ go_bandit([]() {
       AssertThat(e.local_dir(), Equals("/source/path"));
       AssertThat(e.remote_dir(), Equals("/destination/path"));
       AssertThat(e.snet(), Equals(false));
-      const ConfigEntry& e2 = c.getEntryByPath("/source/path2");
+      const ConfigEntry &e2 = c.getEntryByPath("/source/path2");
       AssertThat(e2.username(), Equals("hello"));
       AssertThat(e2.apikey(), Equals("1234"));
       AssertThat(e2.container(), Equals("publish"));
