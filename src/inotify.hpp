@@ -1,8 +1,10 @@
-/// Our own c++ wrapper around inotify. Build from ../experiments/inotify_own_wrapper.cpp
+/// Our own c++ wrapper around inotify. Created from ../experiments/inotify_own_wrapper.cpp
 
 #include <sys/inotify.h>
 #include <unistd.h>
 #include <system_error>
+
+#include "utils.hpp"
 
 namespace inotify {
 
@@ -55,6 +57,7 @@ public:
   int handle() const { return _handle; }
 };
 
+/// An event that happened to a file
 struct Event {
     Watch&   watch;
     uint32_t mask;     /* Mask of events */
@@ -64,7 +67,7 @@ struct Event {
 
     std::string path() const {
       auto out = watch.path;
-      joinPaths(out, name);
+      cdnalizerd::joinPaths(out, name);
       return out;
     }
     
@@ -104,7 +107,8 @@ struct Event {
 struct Instance {
   int handle;
   std::map<int, Watch> watches;
-  std::vector<std::string, Watch*> paths;
+  // Path to watch handle
+  std::map<std::string, int> paths; 
   Instance() : handle(inotify_init()) {
     if (handle == -1)
       throw std::system_error(errno, std::system_category());
@@ -115,18 +119,23 @@ struct Instance {
       throw std::logic_error("Can't watch the same path twice");
     auto watch = Watch(handle, path, mask);
     auto result = watches.emplace(std::make_pair(watch.handle(), std::move(watch)));
-    paths.insert({watch.path, &watch});
+    paths.insert({watch.path, watch.handle()});
     return result.first->second;
   }
   void removeWatch(Watch &watch) {
     auto found = watches.find(watch.handle());
-    if (found != watches.end())
+    if (found != watches.end()) {
+      paths.erase(found->second.path);
       watches.erase(found);
+    }
   }
   void removeWatch(const std::string& path) {
     auto found = paths.find(path);
-    if (found != paths.end())
+    if (found != paths.end()) {
+      int handle = found->second;
+      watches.erase(handle);
       paths.erase(found);
+    }
   }
   bool alreadyWatching(const std::string& path) const {
     auto found = paths.find(path);
@@ -138,6 +147,7 @@ struct Instance {
     char events[buf_size];
     // This is where the program will pause, until a signal is received (and
     // errno=EINTR) or a file is changed
+    // This is the glibc read function
     len = read(handle, events, buf_size);
     if (len == -1)
       throw std::system_error(errno, std::system_category());

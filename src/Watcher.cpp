@@ -18,8 +18,8 @@ void Watcher::readConfig() {
 }
 
 void Watcher::watchNewDir(const char *path) {
-  if (!notify.alreadyWatching(path)) {
-    notify.addWatch(path, IN_CREATE | IN_CLOSE_WRITE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO | IN_DELETE_SELF);
+  if (!inotify.alreadyWatching(path)) {
+    inotify.addWatch(path, IN_CREATE | IN_CLOSE_WRITE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO | IN_DELETE_SELF);
   }
 }
 
@@ -34,7 +34,7 @@ void Watcher::watch() {
         for (auto& cookie : cookies)
           onFileRemoved(cookie.second);
       cookies.clear();
-      for (auto& event : notify.waitForEvents()) {
+      for (auto& event : inotify.waitForEvents()) {
         auto path = event.path();
         std::cout << "EVENT" << std::endl;
         if (event.wasSaved()) {
@@ -54,11 +54,11 @@ void Watcher::watch() {
         } else if (event.wasMovedFrom()) {
           // A file or dir was moved somewhere
           // The move operation generates a cookie that we can use later to tell if it landed back in our tree
-          cookies.insert(std::make_pair(event.GetCookie(), path));
-          std::cout << "Moved From " << event.GetCookie() << ' ' << path << std::endl;
+          cookies.insert(std::make_pair(event.cookie, path));
+          std::cout << "Moved From " << event.cookie << ' ' << path << std::endl;
         } else if (event.wasMovedTo()) {
           // A file or dir move has completed
-          auto found = cookies.find(event.GetCookie());
+          auto found = cookies.find(event.cookie);
           if (found != cookies.end()) {
             // The move operation started in our tree, so this is a rename for cloud files
             onFileRenamed(found->second, path);
@@ -74,6 +74,7 @@ void Watcher::watch() {
       std::cerr << e.what() << std::endl;
     } catch (std::system_error &e) {
       std::cerr << e.what() << std::endl;
+    }
   }
 }
 

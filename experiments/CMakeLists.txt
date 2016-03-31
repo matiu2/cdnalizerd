@@ -1,7 +1,8 @@
 project(experiments)
 
-add_executable(inotify inotify.cpp ${INOTIFY_SOURCE_FILE})
-set_target_properties(inotify PROPERTIES INCLUDE_DIRECTORIES ${INOTIFY_SOURCE_DIR})
+# Commented out becaues inotify-cxx.h that it imports generates compiler warnings
+#add_executable(inotify inotify.cpp ${INOTIFY_SOURCE_FILE})
+#set_target_properties(inotify PROPERTIES INCLUDE_DIRECTORIES ${INOTIFY_SOURCE_DIR})
 
 add_executable(locale locale.cpp)
 

@@ -14,7 +14,7 @@
 
 #include "config_reader/config.hpp"
 #include "login.hpp"
-#include "inotify.hpp" // Brought from build/3rd_party/src/inotify... by cmake
+#include "inotify.hpp"
 #include "utils.hpp"
 
 #include <map>
@@ -34,7 +34,6 @@ private:
   std::map<uint32_t, std::string> cookies;
   const Config& config;
   std::vector<WatchGroup> groups;
-  Inotify notify;
   void readConfig();
   void watchNewDir(const char* path);
   void onFileSaved(std::string);

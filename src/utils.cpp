@@ -65,7 +65,7 @@ void walkDir(const char* path, std::function<void(const char*)> callback) {
   }
 }
 
-std::string oinPaths(const std::string &base, const std::string &extra) {
+std::string joinPaths(const std::string &base, const std::string &extra) {
   auto out = base;
   if (out.back() != '/')
     out.append("/");
