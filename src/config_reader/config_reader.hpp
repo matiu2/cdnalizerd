@@ -11,7 +11,7 @@ namespace cdnalizerd {
 /** Reads in a config file.
  *  Every line can be of one of these 4 formats
  *  username=xx
- *  key=yyy
+ *  apikey=yyy
  *  container=zzz
  *  snet=off
  *  move=on
@@ -26,7 +26,7 @@ namespace cdnalizerd {
  *  "/local/path with spaces" "/remote/path with spaces"
  *
  *  The last path will be in container2 instead of zzz, but will use the same
- *auth settings
+ *  auth, snet and move settings
  *
  **/
 Config read_config(std::istream &in);

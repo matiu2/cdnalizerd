@@ -69,13 +69,13 @@ public:
 /// For debugging, make sure that we never use the list of Entries unsorted.
 using EntriesBase = std::vector<ConfigEntry>;
 struct Entries : public EntriesBase {
-  bool dirty = true; /// true= list is unsorted
+  bool is_sorted = false;
   void push_back(const value_type &val) {
-    dirty = true;
+    is_sorted = false;
     EntriesBase::push_back(val);
   }
   void push_back(value_type &&val) {
-    dirty = true;
+    is_sorted = false;
     EntriesBase::push_back(val);
   }
 };
@@ -138,14 +138,14 @@ public:
   const Config &use() {
     std::sort(_entries.begin(), _entries.end());
 #ifndef NDEBUG
-    _entries.dirty = false;
+    _entries.is_sorted = true;
 #endif
     return *this;
   }
 
   const ConfigEntry &getEntryByPath(const std::string &path) const {
 #ifndef NDEBUG
-    assert(!_entries.dirty);
+    assert(_entries.is_sorted);
 #endif
     auto found = std::lower_bound(_entries.cbegin(), _entries.cend(), path);
     if (found != _entries.cend())
@@ -159,5 +159,7 @@ public:
     }
   }
   const Entries &entries() const { return _entries; }
+  /// Returns true if we have a config
+  operator bool() const { return _entries.size() > 0; }
 };
 }
