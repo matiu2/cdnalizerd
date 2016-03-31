@@ -70,9 +70,10 @@ std::string joinPaths(const std::string &base, const std::string &extra) {
   auto out = base;
   if (out.back() != '/')
     out.append("/");
-  out.append(extra);
-  if (out.back() != '/')
-    out.append("/");
+  if ((extra.front() == '/') && extra.size() > 1)
+    std::copy(extra.begin() + 1, extra.end(), std::back_inserter(out));
+  else
+    out.append(extra);
   return out;
 }
 }

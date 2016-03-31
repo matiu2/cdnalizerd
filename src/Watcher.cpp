@@ -40,7 +40,6 @@ void Watcher::watch() {
       cookies.clear();
       for (const auto &event : inotify.waitForEvents()) {
         auto path = event.path();
-        std::cout << "EVENT" << std::endl;
         if (event.wasSaved()) {
           // A file has just been saved
           onFileSaved(path);
@@ -52,7 +51,6 @@ void Watcher::watch() {
             std::cout << "Delete self " << path << std::endl;
           } else {
             // A file or directory was deleted
-            // TODO: If it was a dir, stop watching it and all its sub dirs
             onFileRemoved(path);
           }
         } else if (event.wasMovedFrom()) {
@@ -73,7 +71,6 @@ void Watcher::watch() {
           } else {
             // The move operation originated else where so this is a create for
             // cloud files
-            // TODO: If it is a dir, recursively follow it
             onFileSaved(path);
           }
         }

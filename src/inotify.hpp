@@ -22,16 +22,17 @@ private:
 
 public:
   std::string path;
-  Watch(int inotify_handle, const char *path, uint32_t mask)
+  Watch(int inotify_handle, std::string path, uint32_t mask)
       : inotify_handle(inotify_handle),
-        _handle(inotify_add_watch(inotify_handle, path, mask)), path(path) {
+        _handle(inotify_add_watch(inotify_handle, path.c_str(), mask)),
+        path(std::move(path)) {
     if (_handle == -1)
       throw std::system_error(errno, std::system_category());
   }
   Watch(const Watch &other) = delete; // Can't copy it, it's a real resource
   // Move is fine
   Watch(Watch &&other)
-      : inotify_handle(other.inotify_handle), _handle(other._handle) {
+      : inotify_handle(other.inotify_handle), _handle(other._handle), path(std::move(other.path)) {
     other.erase(); // Make the other one forget about our resources, so that
                    // when the destructor is called, it won't try to free them,
                    // as we own them now
@@ -78,10 +79,8 @@ struct Event {
   }
 
   std::string path() const {
-    const auto& w = watch();
-    auto out = w.path;
-    cdnalizerd::joinPaths(out, name);
-    return out;
+    auto out = watch().path;
+    return cdnalizerd::joinPaths(out, name);
   }
 
   /* Events we can watch for */
@@ -143,9 +142,9 @@ struct Instance {
     if (found != paths.end())
       throw std::logic_error("Can't watch the same path twice");
     auto watch = Watch(handle, path, mask);
+    paths.insert({watch.path, watch.handle()});
     auto result =
         watches.emplace(std::make_pair(watch.handle(), std::move(watch)));
-    paths.insert({watch.path, watch.handle()});
     return result.first->second;
   }
   void removeWatch(Watch &watch) {
