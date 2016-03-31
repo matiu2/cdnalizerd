@@ -48,6 +48,8 @@ void Watcher::watch() {
           watchNewDir(path.c_str());
         } else if (event.wasDeleted()) {
           // A file or directory was deleted
+          // TODO: If the file is a link or a symlink, don't trigger an event because we don't trigger 
+          // TODO: later maybe follow symlinks.
           onFileRemoved(path);
         } else if (event.wasMovedFrom()) {
           // A file or dir was moved somewhere

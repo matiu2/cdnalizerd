@@ -2,8 +2,14 @@
 
 ## Watcher
 
-* Have rename show the full paths
-* Watch sub dirs that are mv'd in from outside
+* Links:
+  + Version 1:
+    - Ignore delete events on both symlinks and hardlinks
+    - Igonre move events on both symlinks and hardlinks
+    - This is because we don't get notified when a link is created, nor when a hardlinks partner is edited
+  + Version 2 (maybe):
+    - Start watching the destination of directory symlinks created here
+    - Start watching the original(s) of hardlinked and simlinked files created here
 
 ## General
 
@@ -16,8 +22,3 @@
 
 * Store mtimes and checksums in the file metadata
 * Add AuthURL config file setting
-
-# Done
-
-* Add config reader tests - DONE
-* experiment with rax-login - DONE
