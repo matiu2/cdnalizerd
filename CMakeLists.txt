@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 project (cdnalizerd)
 
-set(CMAKE_CXX_FLAGS -std=c++11)
+set(CMAKE_CXX_FLAGS -std=c++1z)
 
 enable_testing()
 

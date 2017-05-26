@@ -8,7 +8,9 @@
 go_bandit([]() {
   using namespace bandit;
   using namespace string_fun;
+  using namespace snowhouse;
   using std::string;
+
 
   describe("trim", [&]() {
     it("1.1. Doesn't touch an empty string", [&] {

@@ -1,5 +1,7 @@
 #include <bandit/bandit.h>
 
+#include <curlpp11.hpp>
+
 #include <iostream>
 #include <sstream>
 
@@ -23,6 +25,8 @@ std::pair<std::string, std::string> getCredentials() {
 
 go_bandit([]() {
 
+  curl::GlobalSentry curl;
+   
   std::stringstream output;
 
   before_each([&]() { output.str(""); });
@@ -32,9 +36,9 @@ go_bandit([]() {
     it("1.1. Can login", [&]() {
       auto creds = getCredentials();
       Rackspace rs;
-      AssertThat(rs.token.empty(), Equals(true));
+      AssertThat(rs.token.empty(), snowhouse::Equals(true));
       rs.login(creds.first, creds.second);
-      AssertThat(rs.token.empty(), Equals(false));
+      AssertThat(rs.token.empty(), snowhouse::Equals(false));
     });
 
   });

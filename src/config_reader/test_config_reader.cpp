@@ -9,6 +9,10 @@ go_bandit([]() {
   using namespace bandit;
   using namespace cdnalizerd;
 
+  using snowhouse::Equals;
+  using snowhouse::LastException;
+  using snowhouse::Contains;
+
   describe("config_reader", [&]() {
     it("1. Can read an empty config", [&] {
       std::stringstream empty;

@@ -7,6 +7,7 @@ ExternalProject_Add(bandit
     GIT_REPOSITORY https://github.com/joakimkarlsson/bandit.git
     TLS_VERIFY true
     TLS_CAINFO certs/DigiCertHighAssuranceEVRootCA.crt
+    BUILD_COMMAND ""
     UPDATE_COMMAND "" # Skip annoying updates for every build
     INSTALL_COMMAND ""
 )
@@ -64,3 +65,6 @@ ExternalProject_Add(curlpp11
 )
 SET(CURLPP11_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/curlpp11/src)
 set(CURLPP11_FILE ${CURLPP11_SOURCE_DIR}/curlpp11.cpp)
+
+## clang libc++
+FIND_LIBRARY(CPP c++)

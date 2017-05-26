@@ -7,6 +7,8 @@ include_directories(${CURL_INCLUDE_DIRS} ${CURLPP11_SOURCE_DIR} ${JSON_INCLUDE_D
 add_executable(test_login test_login.cpp ${CURLPP11_FILE})
 add_dependencies(test_login jsonpp11)
 add_dependencies(test_login bandit)
+add_dependencies(test_login inotify_cxx)
+add_dependencies(test_login curlpp11)
 target_link_libraries(test_login ${OPENSSL_LIBRARIES} ${CURL_LIBRARIES})
 set_property(
   TARGET test_login
@@ -16,3 +18,5 @@ add_test(test_login test_login)
 
 add_executable(cdnalizerd main.cpp utils.cpp Watcher.cpp ${INOTIFY_SOURCE_FILE} ${CURLPP11_FILE})
 target_link_libraries(cdnalizerd config_reader ${OPENSSL_LIBRARIES} ${CURL_LIBRARIES})
+add_dependencies(cdnalizerd inotify_cxx)
+add_dependencies(cdnalizerd curlpp11)
