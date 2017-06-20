@@ -8,9 +8,10 @@ namespace cdnalizerd {
 
 void Watcher::readConfig() {
   for (const auto &entry : config.entries()) {
-    Rackspace &login = logins[entry.username()];
+    std::unique_ptr<Rackspace> &login = logins[entry.username()];
     if (!login)
-      login.login(entry.username(), entry.apikey());
+      login.reset(new Rackspace(yield));
+    login->login(entry.username(), entry.apikey());
     // Starts watching a directory
     watchNewDir(entry.local_dir().c_str());
     walkDir(entry.local_dir().c_str(),

@@ -11,7 +11,7 @@ namespace cdnalizerd {
 std::string getContainerUrl(const Rackspace &login, const ConfigEntry &config) {
   assert(login); // Can't watch a dir until we're logged in to rackspace
   const json::JList &regions =
-      login.response.at("access").at("serviceCatalog").at("cloudFiles").at(
+      login.loginJSON().at("access").at("serviceCatalog").at("cloudFiles").at(
           "endPoints");
   std::string url;
   // We get a list of regions, it doesn't come as a json dict, so we have to

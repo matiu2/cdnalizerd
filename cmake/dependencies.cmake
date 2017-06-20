@@ -1,6 +1,13 @@
 
 include(ExternalProject)
 
+## Boost
+FIND_PACKAGE(Boost REQUIRED
+             COMPONENTS system)
+IF (Boost_FOUND)
+    INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
+ENDIF()
+
 ## Bandit (for tests)
 ExternalProject_Add(bandit
     PREFIX 3rd_party
@@ -13,58 +20,32 @@ ExternalProject_Add(bandit
 )
 SET(BANDIT_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/bandit)
 
-ExternalProject_Add(inotify_cxx
+## RESTClient2 - Allows us to talk to Rackspace cloud files et al.
+
+ExternalProject_Add(RESTClient2
     PREFIX 3rd_party
-    #--Download step--------------
-    URL http://inotify.aiken.cz/download/inotify-cxx/inotify-cxx-0.7.4.tar.gz
-    URL_HASH SHA1=1f009dc92c29f1b12e14212dddf8d4696c63051a
-    #--Configure step-------------
-    CONFIGURE_COMMAND ""
-    #--Build step-----------------
-    BUILD_COMMAND ""
-    #--Install step---------------
+    GIT_REPOSITORY git@github.com:matiu2/RESTClient2.git
+    TLS_VERIFY true
+    TLS_CAINFO certs/DigiCertHighAssuranceEVRootCA.crt
+    TEST_BEFORE_INSTALL 0
+    TEST_COMMAND ""   # Requires generation of rackspace credentials
     UPDATE_COMMAND "" # Skip annoying updates for every build
     INSTALL_COMMAND ""
 )
-set(INOTIFY_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/inotify_cxx)
-set(INOTIFY_SOURCE_FILE ${INOTIFY_SOURCE_DIR}/inotify-cxx.cpp)
-add_custom_command(
-    OUTPUT ${INOTIFY_SOURCE_FILE}
-    DEPENDS inotify_cxx
-)
-
-## jsonpp11 - JSON wrapper
+SET(RESTClient2_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/RESTClient2/src)
+find_library(RESTClient RESTClient HINTS ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/RESTClient2-build/src)
 
 ExternalProject_Add(jsonpp11
-    PREFIX 3rd_party
-    GIT_REPOSITORY https://github.com/matiu2/jsonpp11.git
-    TLS_VERIFY true
-    TLS_CAINFO certs/DigiCertHighAssuranceEVRootCA.crt
-    TEST_BEFORE_INSTALL 0
-    TEST_COMMAND ctest
-    UPDATE_COMMAND "" # Skip annoying updates for every build
-    INSTALL_COMMAND ""
-)
+     PREFIX 3rd_party
+     GIT_REPOSITORY https://github.com/matiu2/jsonpp11.git
+     TLS_VERIFY true
+     TLS_CAINFO certs/DigiCertHighAssuranceEVRootCA.crt
+     TEST_BEFORE_INSTALL 0
+     TEST_COMMAND ""   # Test command requires rackspace cloud authentication to work
+     UPDATE_COMMAND "" # Skip annoying updates for every build
+     INSTALL_COMMAND ""
+ )
 SET(JSONPP11_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/jsonpp11/src)
-
-
-## curlpp11 - CURL wrapper
-
-FIND_PACKAGE(CURL REQUIRED)
-FIND_PACKAGE(OpenSSL REQUIRED)
-
-ExternalProject_Add(curlpp11
-    PREFIX 3rd_party
-    GIT_REPOSITORY https://github.com/matiu2/curlpp11.git
-    TLS_VERIFY true
-    TLS_CAINFO certs/DigiCertHighAssuranceEVRootCA.crt
-    TEST_BEFORE_INSTALL 0
-    TEST_COMMAND ctest
-    UPDATE_COMMAND "" # Skip annoying updates for every build
-    INSTALL_COMMAND ""
-)
-SET(CURLPP11_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/curlpp11/src)
-set(CURLPP11_FILE ${CURLPP11_SOURCE_DIR}/curlpp11.cpp)
 
 ## clang libc++
 FIND_LIBRARY(CPP c++)

@@ -1,18 +1,21 @@
 /// CDNalizer Daemon
 /// Watches a directory for changes and syncs it with a cloud files directory
 
-#include <curlpp11.hpp>
 #include <fstream>
 
 #include "config_reader/config_reader.hpp"
 #include "Watcher.hpp"
 
-#include "curlpp11.hpp"
-
 using namespace cdnalizerd;
 
+void watch(yield_context& yield, Config& config) {
+  // Start watching dirs
+  Watcher watcher(yield, config);
+  watcher.watch();
+}
+
+
 int main(int argc, char **argv) {
-  curl::GlobalSentry curl;
   // See if we have a --config_file option
   std::string config_file_name = "/etc/cdnalizerd.conf";
   if (argc == 2)
@@ -43,8 +46,7 @@ int main(int argc, char **argv) {
             "(defaults to off)" << endl;
     return 1;
   }
-  // Start watching dirs
-  Watcher watcher(config);
-  watcher.watch();
+  RESTClient::http::spawn([&config](yield_context y) { watch(y, config); });
+  RESTClient::http::run();
   return 0;
 }

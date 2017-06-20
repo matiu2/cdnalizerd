@@ -1,15 +1,11 @@
-#include <bandit/bandit.h>
-
-#include <curlpp11.hpp>
-
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 
 #include <cstdlib>
 
 #include "login.hpp"
 
-using namespace bandit;
 using namespace cdnalizerd;
 
 std::pair<std::string, std::string> getCredentials() {
@@ -23,26 +19,29 @@ std::pair<std::string, std::string> getCredentials() {
   return std::make_pair(username, password);
 }
 
-go_bandit([]() {
-
-  curl::GlobalSentry curl;
-   
+int testLogin(yield_context yield) {
   std::stringstream output;
+  auto creds = getCredentials();
+  int result = 0;
+  Rackspace rs(yield);
+  using namespace std;
+  if (!rs.token().empty()) {
+    ++result;
+    cerr << "Expected RS token to be empty at the start" << endl;
+  }
+  rs.login(creds.first, creds.second);
+  if (rs.token().empty()) {
+    ++result;
+    cerr << "Token is empty after login attempt" << endl;
+  }
+  cout << "Login successful. Token: " << rs.token() << endl;
+  return result;
+}
 
-  before_each([&]() { output.str(""); });
-
-  describe("Login", [&]() {
-
-    it("1.1. Can login", [&]() {
-      auto creds = getCredentials();
-      Rackspace rs;
-      AssertThat(rs.token.empty(), snowhouse::Equals(true));
-      rs.login(creds.first, creds.second);
-      AssertThat(rs.token.empty(), snowhouse::Equals(false));
-    });
-
-  });
-
-});
-
-int main(int argc, char *argv[]) { return bandit::run(argc, argv); }
+int main(int argc, char *argv[]) {
+  int result;
+  RESTClient::http::spawn(
+      [&result, argc, argv](yield_context y) { result = testLogin(y); });
+  RESTClient::http::run();
+  return result;
+}

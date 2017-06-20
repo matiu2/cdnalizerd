@@ -11,29 +11,26 @@
 #pragma once
 
 #include <string>
+#include <map>
+
+#include <boost/asio/spawn.hpp>
 
 #include "config_reader/config.hpp"
 #include "login.hpp"
 #include "inotify.hpp"
 #include "utils.hpp"
 
-#include <map>
-
 namespace cdnalizerd {
 
-struct WatchGroup {
-  Rackspace &login;
-  const std::string &directory; // References the string in the config directly
-  std::string url;              // Built with 'getContainerUrl'
-};
+using RESTClient::http::yield_context;
 
 struct Watcher {
 private:
-  std::map<std::string, Rackspace> logins; // maps username to login
+  std::map<std::string, std::unique_ptr<Rackspace>> logins; // maps username to login
+  yield_context& yield;
   inotify::Instance inotify;
   std::map<uint32_t, std::string> cookies;
   const Config &config;
-  std::vector<WatchGroup> groups;
   void readConfig();
   void watchNewDir(const char *path);
   void onFileSaved(std::string);
@@ -42,7 +39,7 @@ private:
   void onFileRemoved(std::string);
 
 public:
-  Watcher(Config &config) : config(config.use()) {}
+  Watcher(yield_context& yield, Config &config) : yield(yield), config(config.use()) {}
   void watch();
 };
 }

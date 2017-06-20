@@ -1,4 +1,5 @@
 /// Experiment that logs in to Rackspace US API Servers
+/// **** This is no longer used, since we changed away from curlpp11 to RESTClient2 library ****
 
 #include <iostream>
 #include <stdexcept>
@@ -6,13 +7,11 @@
 #include <algorithm>
 
 #include <parse_to_json_class.hpp>
-#include <curlpp11.hpp>
 
 using namespace json;
 
 int main(int argc, const char *argv[]) {
   using namespace json;
-  curl::GlobalSentry curl;
 
   // Get the username and api key from the command line
   if (argc != 3) {
@@ -32,7 +31,6 @@ int main(int argc, const char *argv[]) {
   std::string response_string;
 
   // Send it
-  curl::Easy c;
   c.url("https://identity.api.rackspacecloud.com/v2.0/tokens")
       .header("Content-type: application/json")
       .userAgent("cdnalizerd 0.1")
