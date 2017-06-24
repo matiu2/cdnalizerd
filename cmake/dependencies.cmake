@@ -3,7 +3,7 @@ include(ExternalProject)
 
 ## Boost
 FIND_PACKAGE(Boost REQUIRED
-             COMPONENTS system)
+             COMPONENTS system coroutine)
 IF (Boost_FOUND)
     INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
 ENDIF()

@@ -130,7 +130,7 @@ struct Instance {
   std::map<int, Watch> watches;
   // Path to watcher handle lookup
   std::map<std::string, int> paths;
-  Instance() : handle(inotify_init()) {
+  Instance() : handle(inotify_init1(IN_NONBLOCK)) {
     if (handle == -1)
       throw std::system_error(errno, std::system_category());
   }
