@@ -49,7 +49,8 @@ int monitor(yield_context yield, asio::io_service& io) {
 
   // Start watching a path
   std::string path("tmp");
-  int path_handle(inotify_add_watch(
+  std::string path2("tmp/xxx");
+  int main_handle(inotify_add_watch(
       handle, path.c_str(),
       IN_CLOSE_WRITE |     // File opened for writing was closed (*).
           IN_CREATE |      // File/directory created in watched directory (*).
@@ -60,6 +61,18 @@ int monitor(yield_context yield, asio::io_service& io) {
           IN_MOVED_FROM |  // File moved out of watched directory (*).
           IN_MOVED_TO      // File moved into watched directory (*).
       ));
+  int handle2(inotify_add_watch(
+      handle, path2.c_str(),
+      IN_CLOSE_WRITE |     // File opened for writing was closed (*).
+          IN_CREATE |      // File/directory created in watched directory (*).
+          IN_DELETE |      // File/directory deleted from watched directory (*).
+          IN_DELETE_SELF | // Watched file/directory was itself deleted.
+          IN_MODIFY |      // File was modified (*).
+          IN_MOVE_SELF |   // Watched file/directory was itself moved.
+          IN_MOVED_FROM |  // File moved out of watched directory (*).
+          IN_MOVED_TO      // File moved into watched directory (*).
+      ));
+
 
   while (true) {
     // Read some data
@@ -78,7 +91,8 @@ int monitor(yield_context yield, asio::io_service& io) {
 
   std::cout << "DONE" << std::endl;
 
-  inotify_rm_watch(handle, path_handle);
+  inotify_rm_watch(handle, handle2);
+  inotify_rm_watch(handle, main_handle);
   return 0;
 }
 }

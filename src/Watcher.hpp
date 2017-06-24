@@ -1,3 +1,4 @@
+/// TODO: Delete this file, as it is moving into workers/fileWatcher.hpp
 /// Watches for all file changes, then launches jobs depending on what needs
 /// doing. This part of the program pulls in all our libraries
 /// * inotify - to watch for file changes
@@ -12,8 +13,6 @@
 
 #include <string>
 #include <map>
-
-#include <boost/asio/spawn.hpp>
 
 #include "config_reader/config.hpp"
 #include "login.hpp"

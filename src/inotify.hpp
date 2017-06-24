@@ -1,3 +1,4 @@
+#pragma once
 /// Our own c++ wrapper around inotify. Created from
 /// ../experiments/inotify_own_wrapper.cpp
 
@@ -5,9 +6,21 @@
 #include <unistd.h>
 #include <system_error>
 
+#include <boost/asio/buffers_iterator.hpp>
+#include <boost/asio/io_service.hpp>
+#include <boost/asio/posix/stream_descriptor.hpp>
+#include <boost/asio/read.hpp>
+#include <boost/asio/spawn.hpp>
+#include <boost/asio/streambuf.hpp>
+#include <boost/optional.hpp>
+
+#include <RESTClient/tcpip/interface.hpp>
+
 #include "utils.hpp"
 
 namespace inotify {
+
+using RESTClient::http::yield_context;
 
 /// A watch on a single directory
 class Watch {
@@ -32,7 +45,8 @@ public:
   Watch(const Watch &other) = delete; // Can't copy it, it's a real resource
   // Move is fine
   Watch(Watch &&other)
-      : inotify_handle(other.inotify_handle), _handle(other._handle), path(std::move(other.path)) {
+      : inotify_handle(other.inotify_handle), _handle(other._handle),
+        path(std::move(other.path)) {
     other.erase(); // Make the other one forget about our resources, so that
                    // when the destructor is called, it won't try to free them,
                    // as we own them now
@@ -64,12 +78,14 @@ public:
 /// An event that happened to a file
 struct Event {
   using GetWatch = std::function<const Watch &(void)>;
-  GetWatch watch; // Is filled in in waitForEvents
+  GetWatch watch; // Is filled in in waitForEvent
   int watch_handle;
   uint32_t mask;   /* Mask of events */
   uint32_t cookie; /* Unique cookie associating related
                       events (for rename(2)) */
   std::string name;
+  // If it's a move or copy operation, 'destination' is the destination event
+  std::unique_ptr<Event> destination;
 
   Event(GetWatch watch, int watch_handle, uint32_t mask, uint32_t cookie,
         const char *namePtr, int nameLen)
@@ -99,7 +115,7 @@ struct Event {
   } // This means our actual directory was deleted
   bool wasSelfMoved() const {
     return mask & IN_MOVE_SELF;
-  } // TODO: Test if we need to re-set up watches after *self* was moved
+  }
 
   /* Events we get wether we like it or not  */
   bool wasUnmounted() const { return mask & IN_UNMOUNT; }
@@ -123,20 +139,38 @@ struct Event {
   bool oneShot() const { return mask & IN_ONESHOT; }
 };
 
+namespace asio = boost::asio;
+
+union RawEvent {
+  char raw[sizeof(inotify_event) + NAME_MAX + 1];
+  inotify_event event;
+};
+
 /// A collection of Watches
 struct Instance {
+  yield_context &yield;
   int handle;
+  std::shared_ptr<RESTClient::tcpip::io_service> io;
+  asio::posix::stream_descriptor stream;
+  boost::asio::mutable_buffers_1 buffer;
+
   // Watch handle to watcher lookup
   std::map<int, Watch> watches;
   // Path to watcher handle lookup
   std::map<std::string, int> paths;
-  Instance() : handle(inotify_init1(IN_NONBLOCK)) {
+
+  // Where incoming events are read to
+  RawEvent data;
+
+  Instance(yield_context &yield)
+      : yield(yield), handle(inotify_init1(IN_NONBLOCK)),
+        io(RESTClient::tcpip::getService()), stream(*io),
+        buffer(asio::buffer(data.raw)) {
     if (handle == -1)
       throw std::system_error(errno, std::system_category());
+    stream.assign(handle);
   }
-  const Watch& watchFromHandle(int handle) {
-    return watches.at(handle);
-  }
+  const Watch &watchFromHandle(int handle) { return watches.at(handle); }
   Watch &addWatch(const char *path, uint32_t mask) {
     auto found = paths.find(path);
     if (found != paths.end())
@@ -166,32 +200,20 @@ struct Instance {
     auto found = paths.find(path);
     return (found != paths.end());
   }
-  std::vector<Event> waitForEvents() {
-    // TODO: Work out a better number. Maybe put it in the config
-    constexpr int max_event_count = 20;
-    constexpr int buf_size = max_event_count * sizeof(inotify_event);
-    static_assert(buf_size < SSIZE_MAX, "http://linux.die.net/man/2/read would "
-                                        "give undefined behaviour if "
-                                        "'buf_size' is too big");
-    char events[buf_size];
-    // This is where the program will pause, until a signal is received (and
-    // errno=EINTR) or a file is changed
-    // This is the glibc read function
-    int len = read(handle, events, buf_size);
+  Event waitForEvent() {
+    // Get one event
+    union EventHolder {
+      char raw[sizeof(inotify_event) + NAME_MAX + 1];
+      inotify_event event;
+    } data;
+    int len = boost::asio::async_read(
+        stream, boost::asio::buffer(data.raw),
+        boost::asio::transfer_at_least(sizeof(inotify_event)), yield);
     if (len == -1)
       throw std::system_error(errno, std::system_category());
-    std::vector<Event> result;
-    char* loc = events;
-    while (loc < events + len) {
-      inotify_event* event = (inotify_event*)loc;
-      int handle = event->wd;
-      result.emplace_back(Event([ handle, this ]() -> const Watch &
-                                { return watches.at(handle); },
-                                handle, event->mask, event->cookie, event->name,
-                                event->len));
-      loc += event->len + sizeof(inotify_event);
-    }
-    return result;
+    return Event([this]() -> const Watch & { return watches.at(handle); },
+                 handle, data.event.mask, data.event.cookie, data.event.name,
+                 data.event.len);
   }
 };
 }

@@ -4,16 +4,11 @@
 #include <fstream>
 
 #include "config_reader/config_reader.hpp"
-#include "Watcher.hpp"
+#include "Status.hpp"
+
+#include "workers/fileWatcher.hpp"
 
 using namespace cdnalizerd;
-
-void watch(yield_context& yield, Config& config) {
-  // Start watching dirs
-  Watcher watcher(yield, config);
-  watcher.watch();
-}
-
 
 int main(int argc, char **argv) {
   // See if we have a --config_file option
@@ -46,7 +41,10 @@ int main(int argc, char **argv) {
             "(defaults to off)" << endl;
     return 1;
   }
-  RESTClient::http::spawn([&config](yield_context y) { watch(y, config); });
+  cdnalizerd::Status status;
+  RESTClient::http::spawn([&config, &status](yield_context y) {
+    cdnalizerd::workers::watchForFileChanges(y, status, config);
+  });
   RESTClient::http::run();
   return 0;
 }

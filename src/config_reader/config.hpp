@@ -95,12 +95,14 @@ public:
   void addApikey(std::string apikey) { apikeys.push_back(apikey); }
   void addRegion(std::string region) { regions.push_back(region); }
   void addContainer(std::string container) { containers.push_back(container); }
+  /// Toggles service net on and off
   void setSNet(bool new_val) {
     snet = new_val;
-  } /// Toggles service net on and off
+  }
+  /// Toggles move to cloud (instead of just copy) on and off
   void setMove(bool new_val) {
     move = new_val;
-  } /// Toggles move to cloud (instead of just copy) on and off
+  } 
   void addEntry(std::string local_dir, std::string remote_dir) {
     if ((usernames.size() == 0) || (apikeys.size() == 0) ||
         (regions.size() == 0) || (containers.size() == 0))
