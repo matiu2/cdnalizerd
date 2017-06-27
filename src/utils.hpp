@@ -16,4 +16,8 @@ void walkDir(const char *path, std::function<void(const char *)> callback);
 
 /// Joins two urls with exactly one path separator
 std::string joinPaths(const std::string &base, const std::string &extra);
+
+/// When 'extra' starts with 'base', returns the bit after 'base' (with no slashes)
+std::string unJoinPaths(const std::string base, const std::string &extra);
+
 }

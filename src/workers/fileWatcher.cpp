@@ -1,7 +1,8 @@
 #include "fileWatcher.hpp"
 
 #include "../inotify.hpp"
-#include "../handleEvent.hpp"
+
+#include "queueWorker.hpp"
 
 namespace cdnalizerd {
 namespace workers {
@@ -11,17 +12,72 @@ constexpr int maskToFollow =
 
 void readConfig(yield_context &yield, Status &status, const Config &config,
                 inotify::Instance &inotify) {
-  for (const auto &entry : config.entries()) {
-    std::unique_ptr<Rackspace> &login = status.logins[entry.username()];
-    if (!login)
-      login.reset(new Rackspace(yield));
-    login->login(entry.username(), entry.apikey());
+  for (const ConfigEntry &entry : config.entries()) {
     // Starts watching a directory
-    inotify.addWatch(entry.local_dir().c_str(), maskToFollow);
-    walkDir(entry.local_dir().c_str(), [&](const char *path) {
+    inotify::Watch &watch =
+        inotify.addWatch(entry.local_dir->c_str(), maskToFollow);
+    status.watchToConfig[watch.handle()] = entry;
+    walkDir(entry.local_dir->c_str(), [&](const char *path) {
       if (!inotify.alreadyWatching(path))
         inotify.addWatch(path, maskToFollow);
     });
+  }
+}
+
+void handleEvent(Status &status, inotify::Event &&event) {
+  const ConfigEntry &entry = status.watchToConfig[event.watch().handle()];
+  // This may be a move or uplod operation
+  Operation uploadOperation = entry.move ? Move : Upload;
+  // We'll use this in several places below
+  std::string serverSource =
+      joinPaths(joinPaths(*entry.container, *entry.remote_dir),
+                unJoinPaths(*entry.local_dir, event.path()));
+
+  if (event.wasSaved() && !event.isDir()) {
+    // Simple upload / move
+    status.jobsToDo[entry].emplace_back(
+        Job{uploadOperation, event.path(),
+            joinPaths(*entry.container,
+                      unJoinPaths(*entry.local_dir, event.path()))});
+  } else if (event.wasMovedFrom()) {
+    // This may be a server side rename (copy + delete)
+    if (event.destination) {
+      const ConfigEntry &dest =
+          status.watchToConfig[event.destination->watch().handle()];
+      std::string serverDestinaton =
+          joinPaths(joinPaths(*dest.container, *dest.remote_dir),
+                    unJoinPaths(*dest.local_dir, event.destination->path()));
+
+      if ((*dest.username == *entry.username) &&
+          ((*dest.region == *entry.region))) {
+        // If the source and the destination are in the same region and use the
+        // same login, server side copy, then delete.
+        status.jobsToDo[entry].emplace_back(
+            Job{Copy, serverSource, serverDestinaton,
+                std::unique_ptr<Job::Second>(
+                    new Job::Second{entry, Job{Delete, serverSource}})});
+      } else {
+        // The file is being moved from one account to another or from one region to another
+        // We'll just upload to one account, then delete on the other
+        const ConfigEntry &dest =
+            status.watchToConfig[event.destination->watch().handle()];
+        status.jobsToDo[dest].emplace_back(
+            Job{uploadOperation, event.path(), serverDestinaton,
+                std::unique_ptr<Job::Second>(
+                    new Job::Second{dest, Job{Delete, serverSource}})});
+      }
+    } else {
+      // This file was move out of our known directory space, delete it from the server
+      status.jobsToDo[entry].emplace_back(Job{Delete, serverSource});
+    }
+  } else if (event.wasMovedTo()) {
+    // This file was moved from some unknown source to our space. Upload it to
+    // the server
+    status.jobsToDo[entry].emplace_back(
+        Job{uploadOperation, event.path(), serverSource});
+  } else if (event.wasDeleted()) {
+    status.jobsToDo[entry].emplace_back(
+        Job{Delete, serverSource});
   }
 }
 
@@ -59,8 +115,13 @@ void watchForFileChanges(yield_context &yield, Status &status,
         inotify.addWatch(path.c_str(), maskToFollow);
     } else {
       // ... launch the appropriate server worker
-      handleEvent(std::move(event));
+      handleEvent(status, std::move(event));
     }
+  }
+  // Now spawn up to 10 workers for all the jobs in the queue
+  int spawnCount = std::min(status.jobsToDo.size(), size_t(10));
+  for (int i = 0; i < spawnCount; ++i) {
+    RESTClient::http::spawn([&](yield_context y) { queueWorker(y, status, config); });
   }
 }
     

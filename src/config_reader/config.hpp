@@ -3,6 +3,7 @@
 #include "errors.hpp"
 
 #include <algorithm>
+#include <memory>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -14,55 +15,47 @@ namespace cdnalizerd {
 
 using strings = std::vector<std::string>;
 
-/// Holds the main part of the configuration data
-struct Data {
-  strings usernames;
-  strings apikeys;
-  strings regions;
-  strings containers;
-};
+using sstring = std::shared_ptr<std::string>;
 
 /// Holds a single mapping from a local folder to remote location
-class ConfigEntry {
-private:
-  friend class Config;
-  const Data *data;
-  size_t username_index;
-  size_t apikey_index;
-  size_t region_index;
-  size_t container_index;
-  bool _snet;
-  bool _move; // Move file to cloud instead of just copy
-  std::string _local_dir;
-  std::string _remote_dir;
+struct ConfigEntry {
+  sstring username;
+  sstring apikey;
+  sstring region;
+  sstring container;
+  bool snet;
+  bool move; // Move file to cloud instead of just copy
+  sstring local_dir;
+  sstring remote_dir;
+  ConfigEntry(sstring username, sstring apikey, sstring region,
+              sstring container, bool snet, bool move, sstring local_dir,
+              sstring remote_dir)
+      : username(username), apikey(apikey), region(region),
+        container(container), snet(snet), move(move), local_dir(local_dir),
+        remote_dir(remote_dir) {}
 
-public:
-  ConfigEntry(const Data *data, size_t username, size_t apikey, size_t region,
-              size_t container, std::string local_dir, std::string remote_dir,
-              bool snet, bool move)
-      : data(data), username_index(username), apikey_index(apikey),
-        region_index(region), container_index(container), _local_dir(local_dir),
-        _remote_dir(remote_dir), _snet(snet), _move(move) {}
+  ConfigEntry() = default;
+  ConfigEntry(const ConfigEntry&) = default;
+  ConfigEntry(ConfigEntry&&) = default;
 
-  // Attribute Access
-  const std::string &username() const {
-    return data->usernames[username_index];
-  }
-  const std::string &apikey() const { return data->apikeys[apikey_index]; }
-  const std::string &region() const { return data->regions[region_index]; }
-  const std::string &container() const {
-    return data->containers[container_index];
-  }
-  const std::string &local_dir() const { return _local_dir; }
-  const std::string &remote_dir() const { return _remote_dir; }
-  bool snet() const { return _snet; }
-  bool move() const { return _move; }
+  ConfigEntry &operator=(const ConfigEntry &other) = default;
 
   // To allow easy sorting
   bool operator<(const ConfigEntry &other) const {
-    return _local_dir < other._local_dir;
+    return (*local_dir < *other.local_dir) ||
+           (*remote_dir < *other.remote_dir) || (*username < *other.username) ||
+           (*region < *other.region) || (*container < *other.container) ||
+           (*apikey < *other.apikey) || (snet < other.snet) ||
+           (move < other.move);
   }
-  bool operator<(const std::string &path) const { return _local_dir < path; }
+  bool operator<(const std::string &path) const { return *local_dir < path; }
+  bool operator==(const ConfigEntry &other) const {
+    return (*local_dir == *other.local_dir) &&
+           (*remote_dir == *other.remote_dir) &&
+           (*username == *other.username) && (*region == *other.region) &&
+           (*container == *other.container) && (*apikey == *other.apikey) &&
+           (snet == other.snet) && (move == other.move);
+  }
 };
 
 #ifndef NDEBUG
@@ -80,59 +73,45 @@ struct Entries : public EntriesBase {
   }
 };
 #else
-using Entries = std::vector<ConfigEntry>
+using Entries = std::vector<ConfigEntry>;
 #endif
 
 /// Holds our configuration
-class Config : private Data {
+class Config {
 private:
-  bool snet = false;
-  bool move = false;
   Entries _entries;
+  ConfigEntry lastEntry;
 
 public:
-  void addUsername(std::string username) { usernames.push_back(username); }
-  void addApikey(std::string apikey) { apikeys.push_back(apikey); }
-  void addRegion(std::string region) { regions.push_back(region); }
-  void addContainer(std::string container) { containers.push_back(container); }
+  void addUsername(std::string username) { lastEntry.username.reset(new std::string(std::move(username))); }
+  void addApikey(std::string apikey) { lastEntry.apikey.reset(new std::string(std::move(apikey))); }
+  void addRegion(std::string region) { lastEntry.region.reset(new std::string(std::move(region))); }
+  void addContainer(std::string container) { lastEntry.container.reset(new std::string(std::move(container))); }
   /// Toggles service net on and off
   void setSNet(bool new_val) {
-    snet = new_val;
+    lastEntry.snet = new_val;
   }
   /// Toggles move to cloud (instead of just copy) on and off
   void setMove(bool new_val) {
-    move = new_val;
+    lastEntry.move = new_val;
   } 
   void addEntry(std::string local_dir, std::string remote_dir) {
-    if ((usernames.size() == 0) || (apikeys.size() == 0) ||
-        (regions.size() == 0) || (containers.size() == 0))
-      throw ConfigError("Need to have a valid username, apikey, region and "
-                        "container before adding a path pair");
-    _entries.push_back({this, usernames.size() - 1, apikeys.size() - 1,
-                        regions.size() - 1, containers.size() - 1, local_dir,
-                        remote_dir, snet, move});
+    ConfigEntry result(lastEntry);
+    result.local_dir.reset(new std::string(std::move(local_dir)));
+    result.remote_dir.reset(new std::string(std::move(remote_dir)));
+    _entries.emplace_back(std::move(result));
   }
 
   Config() = default;
 
-  Config(const Config &other) : Data(other), _entries(other._entries) {
-    // Update our entries to recognize us as the parent now
-    for (auto &e : _entries)
-      e.data = this;
-  }
-
-  Config(Config &&other) : Data(other), _entries(other._entries) {
-    // Update our entries to recognize us as the parent now
-    for (auto &e : _entries)
-      e.data = this;
-    other._entries.clear();
-  }
+  Config(const Config &other)
+      : _entries(other._entries), lastEntry(other.lastEntry) {}
+  Config(Config &&other)
+      : _entries(std::move(other._entries)), lastEntry(other.lastEntry) {}
 
   Config &operator=(const Config &other) {
-    Data::operator=(other);
     _entries = other._entries;
-    for (auto &e : _entries)
-      e.data = this;
+    lastEntry = other.lastEntry;
     return *this;
   }
 
@@ -145,7 +124,7 @@ public:
     return *this;
   }
 
-  const ConfigEntry &getEntryByPath(const std::string &path) const {
+  ConfigEntry getEntryByPath(const std::string &path) const {
 #ifndef NDEBUG
     assert(_entries.is_sorted);
 #endif
@@ -156,7 +135,7 @@ public:
       std::stringstream msg;
       msg << "Couldn't find " << path << " in this list: ";
       for (auto &e : _entries)
-        msg << e.local_dir() << ", ";
+        msg << *e.local_dir << ", ";
       throw std::logic_error(msg.str());
     }
   }

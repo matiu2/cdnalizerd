@@ -17,8 +17,8 @@ std::string getContainerUrl(const Rackspace &login, const ConfigEntry &config) {
   // We get a list of regions, it doesn't come as a json dict, so we have to
   // scan through them to find our configured region
   for (const auto &region : regions) {
-    if (region.at("region") == config.region()) {
-      if (config.snet())
+    if (region.at("region") == *config.region) {
+      if (config.snet)
         url = region.at("privateURL");
       else
         url = region.at("publicURL");
@@ -28,8 +28,8 @@ std::string getContainerUrl(const Rackspace &login, const ConfigEntry &config) {
   if (url.empty())
     throw std::runtime_error(
         std::string("Unable to find url for cloud files region: ") +
-        config.region());
-  url = joinPaths(joinPaths(url, config.container()), config.remote_dir());
+        *config.region);
+  url = joinPaths(joinPaths(url, *config.container), *config.remote_dir);
   return url;
 }
 
@@ -76,4 +76,14 @@ std::string joinPaths(const std::string &base, const std::string &extra) {
     out.append(extra);
   return out;
 }
+
+std::string unJoinPaths(const std::string base, const std::string &extra) {
+  if ((base.size() <= extra.size()) &&
+      (std::equal(base.begin(), base.end(), extra.begin()))) {
+    return extra.substr(base.size());
+  }
+  // Nothing to return, because base is not a prefix of extra
+  return "";
+}
+
 }

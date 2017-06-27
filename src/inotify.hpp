@@ -17,6 +17,7 @@
 #include <RESTClient/tcpip/interface.hpp>
 
 #include "utils.hpp"
+#include "config_reader/config.hpp"
 
 namespace inotify {
 
