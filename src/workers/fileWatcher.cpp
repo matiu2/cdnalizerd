@@ -15,9 +15,9 @@ void readConfig(yield_context &yield, Status &status, const Config &config,
   for (const ConfigEntry &entry : config.entries()) {
     // Starts watching a directory
     inotify::Watch &watch =
-        inotify.addWatch(entry.local_dir->c_str(), maskToFollow);
+        inotify.addWatch(entry.local_dir.c_str(), maskToFollow);
     status.watchToConfig[watch.handle()] = entry;
-    walkDir(entry.local_dir->c_str(), [&](const char *path) {
+    walkDir(entry.local_dir.c_str(), [&](const char *path) {
       if (!inotify.alreadyWatching(path))
         inotify.addWatch(path, maskToFollow);
     });
@@ -30,23 +30,23 @@ void handleEvent(Status &status, inotify::Event &&event) {
   Operation uploadOperation = entry.move ? Move : Upload;
   // We'll use this in several places below
   std::string serverSource =
-      joinPaths(joinPaths(*entry.container, *entry.remote_dir),
-                unJoinPaths(*entry.local_dir, event.path()));
+      joinPaths(joinPaths(*entry.container, entry.remote_dir),
+                unJoinPaths(entry.local_dir, event.path()));
 
   if (event.wasSaved() && !event.isDir()) {
     // Simple upload / move
     status.jobsToDo[entry].emplace_back(
         Job{uploadOperation, event.path(),
             joinPaths(*entry.container,
-                      unJoinPaths(*entry.local_dir, event.path()))});
+                      unJoinPaths(entry.local_dir, event.path()))});
   } else if (event.wasMovedFrom()) {
     // This may be a server side rename (copy + delete)
     if (event.destination) {
       const ConfigEntry &dest =
           status.watchToConfig[event.destination->watch().handle()];
       std::string serverDestinaton =
-          joinPaths(joinPaths(*dest.container, *dest.remote_dir),
-                    unJoinPaths(*dest.local_dir, event.destination->path()));
+          joinPaths(joinPaths(*dest.container, dest.remote_dir),
+                    unJoinPaths(dest.local_dir, event.destination->path()));
 
       if ((*dest.username == *entry.username) &&
           ((*dest.region == *entry.region))) {

@@ -25,14 +25,14 @@ struct ConfigEntry {
   sstring container;
   bool snet;
   bool move; // Move file to cloud instead of just copy
-  sstring local_dir;
-  sstring remote_dir;
+  std::string local_dir;
+  std::string remote_dir;
   ConfigEntry(sstring username, sstring apikey, sstring region,
-              sstring container, bool snet, bool move, sstring local_dir,
-              sstring remote_dir)
+              sstring container, bool snet, bool move, std::string local_dir,
+              std::string remote_dir)
       : username(username), apikey(apikey), region(region),
-        container(container), snet(snet), move(move), local_dir(local_dir),
-        remote_dir(remote_dir) {}
+        container(container), snet(snet), move(move),
+        local_dir(std::move(local_dir)), remote_dir(std::move(remote_dir)) {}
 
   ConfigEntry() = default;
   ConfigEntry(const ConfigEntry&) = default;
@@ -42,16 +42,16 @@ struct ConfigEntry {
 
   // To allow easy sorting
   bool operator<(const ConfigEntry &other) const {
-    return (*local_dir < *other.local_dir) ||
-           (*remote_dir < *other.remote_dir) || (*username < *other.username) ||
+    return (local_dir < other.local_dir) ||
+           (remote_dir < other.remote_dir) || (*username < *other.username) ||
            (*region < *other.region) || (*container < *other.container) ||
            (*apikey < *other.apikey) || (snet < other.snet) ||
            (move < other.move);
   }
-  bool operator<(const std::string &path) const { return *local_dir < path; }
+  bool operator<(const std::string &path) const { return local_dir < path; }
   bool operator==(const ConfigEntry &other) const {
-    return (*local_dir == *other.local_dir) &&
-           (*remote_dir == *other.remote_dir) &&
+    return (local_dir == other.local_dir) &&
+           (remote_dir == other.remote_dir) &&
            (*username == *other.username) && (*region == *other.region) &&
            (*container == *other.container) && (*apikey == *other.apikey) &&
            (snet == other.snet) && (move == other.move);
@@ -96,9 +96,17 @@ public:
     lastEntry.move = new_val;
   } 
   void addEntry(std::string local_dir, std::string remote_dir) {
+    // Validate what we have
+    if ((!lastEntry.username) || (lastEntry.username->empty()) ||
+        (!lastEntry.apikey) || (lastEntry.apikey->empty()) ||
+        (!lastEntry.region) || (lastEntry.region->empty()) ||
+        (!lastEntry.container) || (lastEntry.container->empty()))
+      throw ConfigError("Need to have a valid username, apikey, region "
+                        "and container before adding a path pair");
+        // Now create it
     ConfigEntry result(lastEntry);
-    result.local_dir.reset(new std::string(std::move(local_dir)));
-    result.remote_dir.reset(new std::string(std::move(remote_dir)));
+    result.local_dir = std::move(local_dir);
+    result.remote_dir = std::move(remote_dir);
     _entries.emplace_back(std::move(result));
   }
 
@@ -135,7 +143,7 @@ public:
       std::stringstream msg;
       msg << "Couldn't find " << path << " in this list: ";
       for (auto &e : _entries)
-        msg << *e.local_dir << ", ";
+        msg << e.local_dir << ", ";
       throw std::logic_error(msg.str());
     }
   }

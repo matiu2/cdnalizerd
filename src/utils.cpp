@@ -29,7 +29,7 @@ std::string getContainerUrl(const Rackspace &login, const ConfigEntry &config) {
     throw std::runtime_error(
         std::string("Unable to find url for cloud files region: ") +
         *config.region);
-  url = joinPaths(joinPaths(url, *config.container), *config.remote_dir);
+  url = joinPaths(joinPaths(url, *config.container), config.remote_dir);
   return url;
 }
 

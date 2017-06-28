@@ -73,6 +73,8 @@ struct ConfigReader {
     std::string variable, value;
     std::copy(line.begin(), eq, std::back_inserter(variable));
     std::copy(++eq, line.end(), std::back_inserter(value));
+    string_fun::trim(variable);
+    string_fun::trim(value);
     // Store the value
     if (variable == "username")
       config.addUsername(value);

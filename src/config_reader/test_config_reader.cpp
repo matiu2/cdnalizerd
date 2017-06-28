@@ -18,26 +18,24 @@ go_bandit([]() {
       std::stringstream empty;
       Config a = read_config(empty);
     });
-    it("2. Can read a username", [&] {
+    it("2. Can read a full entry", [&] {
       std::stringstream config;
-      config << "username=james_bond";
+      config << "username=james_bond\n";
+      config << "apikey=key key key\n";
+      config << "container=    the.box    \n";
+      config << "region=ORD\n";
+      config << "/images /remote_images\n";
+      config << "/videos /videos\n";
       Config c = read_config(config);
-      AssertThat(c.entries().size(), Equals(size_t(1)));
-      AssertThat(*c.entries().front().username, Equals("james_bond"));
-      
-    });
-    it("3. Can read an apikey", [&] {
-      std::stringstream config;
-      config << "apikey=james_bond";
-      Config c = read_config(config);
-      AssertThat(c.entries().size(), Equals(size_t(1)));
-      AssertThat(*c.entries().front().apikey, Equals("james_bond"));
-    });
-    it("4. Can read a container", [&] {
-      std::stringstream config;
-      config << "container=james_bond";
-      Config c = read_config(config);
-      AssertThat(c.entries().size(), Equals(size_t(1)));
+      // One entry per path line
+      AssertThat(c.entries().size(), Equals(2u));
+      const auto& entry = c.entries().front();
+      AssertThat(*entry.username, Equals("james_bond"));
+      AssertThat(*entry.apikey, Equals("key key key"));
+      AssertThat(*entry.container, Equals("the.box"));
+      AssertThat(*entry.region, Equals("ORD"));
+      AssertThat(entry.local_dir, Equals("/images"));
+      AssertThat(entry.remote_dir, Equals("/remote_images"));
     });
     it("5. hates bad setting names", [&] {
       std::stringstream config;
@@ -73,8 +71,8 @@ go_bandit([]() {
       AssertThat(*e.apikey, Equals("1234"));
       AssertThat(*e.container, Equals("publish"));
       AssertThat(*e.region, Equals("SYD"));
-      AssertThat(*e.local_dir, Equals("/source/path"));
-      AssertThat(*e.remote_dir, Equals("/destination/path"));
+      AssertThat(e.local_dir, Equals("/source/path"));
+      AssertThat(e.remote_dir, Equals("/destination/path"));
     });
 
     std::string service_net{R"(
@@ -98,16 +96,16 @@ go_bandit([]() {
       AssertThat(*e.apikey, Equals("1234"));
       AssertThat(*e.container, Equals("publish"));
       AssertThat(*e.region, Equals("SYD"));
-      AssertThat(*e.local_dir, Equals("/source/path"));
-      AssertThat(*e.remote_dir, Equals("/destination/path"));
+      AssertThat(e.local_dir, Equals("/source/path"));
+      AssertThat(e.remote_dir, Equals("/destination/path"));
       AssertThat(e.snet, Equals(false));
       const ConfigEntry &e2 = c.getEntryByPath("/source/path2");
       AssertThat(*e2.username, Equals("hello"));
       AssertThat(*e2.apikey, Equals("1234"));
       AssertThat(*e2.container, Equals("publish"));
       AssertThat(*e2.region, Equals("SYD"));
-      AssertThat(*e2.local_dir, Equals("/source/path2"));
-      AssertThat(*e2.remote_dir, Equals("/destination/path2"));
+      AssertThat(e2.local_dir, Equals("/source/path2"));
+      AssertThat(e2.remote_dir, Equals("/destination/path2"));
       AssertThat(e2.snet, Equals(true));
     });
   });

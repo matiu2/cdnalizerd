@@ -9,7 +9,7 @@
 namespace string_fun {
 
 void trim(std::string &data) {
-  auto isWs = [](char c) { return (c == ' ') || (c == '\t'); };
+  auto isWs = [](char c) { return (c == ' ') || (c == '\t') || (c == '\n') || (c == '\r'); };
   // Find the end
   auto end = std::find_if_not(data.rbegin(), data.rend(), isWs);
   // Erase the end
