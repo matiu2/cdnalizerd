@@ -24,7 +24,7 @@ void readConfig(yield_context &yield, Status &status, const Config &config,
   }
 }
 
-void handleEvent(Status &status, inotify::Event &&event) {
+Job handleEvent(Status &status, inotify::Event &&event) {
   const ConfigEntry &entry = status.watchToConfig[event.watch().handle()];
   // This may be a move or uplod operation
   Operation uploadOperation = entry.move ? Move : Upload;
@@ -35,10 +35,9 @@ void handleEvent(Status &status, inotify::Event &&event) {
 
   if (event.wasSaved() && !event.isDir()) {
     // Simple upload / move
-    status.jobsToDo[entry].emplace_back(
-        Job{uploadOperation, event.path(),
-            joinPaths(*entry.container,
-                      unJoinPaths(entry.local_dir, event.path()))});
+    return Job{entry, uploadOperation, event.path(),
+               joinPaths(*entry.container,
+                         unJoinPaths(entry.local_dir, event.path()))};
   } else if (event.wasMovedFrom()) {
     // This may be a server side rename (copy + delete)
     if (event.destination) {
@@ -52,32 +51,56 @@ void handleEvent(Status &status, inotify::Event &&event) {
           ((*dest.region == *entry.region))) {
         // If the source and the destination are in the same region and use the
         // same login, server side copy, then delete.
-        status.jobsToDo[entry].emplace_back(
-            Job{Copy, serverSource, serverDestinaton,
-                std::unique_ptr<Job::Second>(
-                    new Job::Second{entry, Job{Delete, serverSource}})});
+        return Job {
+          entry, Copy, serverSource, serverDestinaton,
+              std::shared_ptr<Job>(
+                  new Job{Job{entry, Delete, serverSource}})
+        };
       } else {
-        // The file is being moved from one account to another or from one region to another
+        // The file is being moved from one account to another or from one
+        // region to another
         // We'll just upload to one account, then delete on the other
         const ConfigEntry &dest =
             status.watchToConfig[event.destination->watch().handle()];
-        status.jobsToDo[dest].emplace_back(
-            Job{uploadOperation, event.path(), serverDestinaton,
-                std::unique_ptr<Job::Second>(
-                    new Job::Second{dest, Job{Delete, serverSource}})});
+        return Job{entry, uploadOperation, event.path(), serverDestinaton,
+                   std::shared_ptr<Job>(
+                       new Job{Job{dest, Delete, serverSource}})};
       }
     } else {
-      // This file was move out of our known directory space, delete it from the server
-      status.jobsToDo[entry].emplace_back(Job{Delete, serverSource});
+      // This file was moved out of our known directory space, delete it from
+      // the server
+      return Job{entry, Delete, serverSource};
     }
   } else if (event.wasMovedTo()) {
     // This file was moved from some unknown source to our space. Upload it to
     // the server
-    status.jobsToDo[entry].emplace_back(
-        Job{uploadOperation, event.path(), serverSource});
+    return Job{entry, uploadOperation, event.path(), serverSource};
   } else if (event.wasDeleted()) {
-    status.jobsToDo[entry].emplace_back(
-        Job{Delete, serverSource});
+    return Job{entry, Delete, serverSource};
+  }
+  return Job{};
+}
+
+void queueJob(Job &&job, Status &status, const Config &config) {
+  // Find or create the worker for this job
+  ConnectionMarker marker{job.configuration.username, job.configuration.region};
+  std::list<Worker> workers = status.workers[marker];
+  // We like to have up to 3 workers per connection
+  if (workers.size() < 3) {
+    // Create a new worker
+    Worker worker(workers);
+    worker.jobsToDo.emplace_back(std::move(job));
+    workers.emplace_back(std::move(worker));
+    workers.back().me = --workers.end();
+    RESTClient::http::spawn(
+        [&](yield_context y) { queueWorker(y, status, config); });
+  } else {
+    // Find which worker has the least jobs
+    auto worker = std::min_element(
+        workers.begin(), workers.end(), [](const Worker &a, const Worker &b) {
+          return a.jobsToDo.size() < b.jobsToDo.size();
+        });
+    worker->jobsToDo.emplace_back(std::move(job));
   }
 }
 
@@ -86,6 +109,8 @@ void watchForFileChanges(yield_context &yield, Status &status,
   // Setup
   inotify::Instance inotify(yield);
   readConfig(yield, status, config, inotify);
+
+  std::list<Job> jobsToDo;
 
   while (true) {
     inotify::Event event = inotify.waitForEvent();
@@ -114,14 +139,11 @@ void watchForFileChanges(yield_context &yield, Status &status,
       if (isDir(path.c_str()))
         inotify.addWatch(path.c_str(), maskToFollow);
     } else {
-      // ... launch the appropriate server worker
-      handleEvent(status, std::move(event));
+      // Get the next job that needs doing
+      Job job{handleEvent(status, std::move(event))};
+      // Put it in the right queue
+      queueJob(std::move(job), status, config);
     }
-  }
-  // Now spawn up to 10 workers for all the jobs in the queue
-  int spawnCount = std::min(status.jobsToDo.size(), size_t(10));
-  for (int i = 0; i < spawnCount; ++i) {
-    RESTClient::http::spawn([&](yield_context y) { queueWorker(y, status, config); });
   }
 }
     

@@ -22,3 +22,12 @@
 
 * Store mtimes and checksums in the file metadata
 * Add AuthURL config file setting
+
+# Wolf's comments
+
+ * INOTIFY is a QUEUE - so just have all the workers read from it.
+ * Forget server side move now
+
+ * Queue per endpoint
+   + Named workers
+   + 2 per queue
