@@ -1,4 +1,4 @@
-/// TODO: Delete this file, as it is moving into workers/fileWatcher.hpp
+/// TODO: Delete this file, as it is moving into processes/mainProcess.hpp
 /// Watches for all file changes, then launches jobs depending on what needs
 /// doing. This part of the program pulls in all our libraries
 /// * inotify - to watch for file changes

@@ -9,7 +9,7 @@
 #include <RESTClient/rest.hpp>
 
 namespace cdnalizerd {
-namespace workers {
+namespace processes {
 
 // Struct that removes workers from their list when we're done with them
 struct WorkerSentry {
@@ -47,5 +47,5 @@ void queueWorker(yield_context &yield, Status& status, Worker& worker) {
   }
 }
 
-} /* workers */ 
+} /* processes */ 
 } /* cdnalizerd  */ 

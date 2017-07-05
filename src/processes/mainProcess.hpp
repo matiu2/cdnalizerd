@@ -4,11 +4,11 @@
 #include "../Status.hpp"
 
 namespace cdnalizerd {
-namespace workers {
+namespace processes {
 
-/// This is the main function in the app and watches for file changes, then launches workers as required
+/// This is the main function in the app and watches for file changes, then launches processes as required
 void watchForFileChanges(yield_context &yield, Status &status,
                          const Config &config);
 
 }
-} /* workers */ 
+} /* processes */ 

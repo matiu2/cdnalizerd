@@ -1,4 +1,4 @@
-#include "fileWatcher.hpp"
+#include "mainProcess.hpp"
 
 #include "../inotify.hpp"
 
@@ -7,7 +7,7 @@
 #include "../operations/inotifyToJob.hpp"
 
 namespace cdnalizerd {
-namespace workers {
+namespace processes {
 
 constexpr int maskToFollow =
     IN_CREATE | IN_CLOSE_WRITE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO;
@@ -115,5 +115,5 @@ void watchForFileChanges(yield_context &yield, Status &status,
 }
     
 
-} /* workers  */ 
+} /* processes  */ 
 } /* cdnalizerd  */ 

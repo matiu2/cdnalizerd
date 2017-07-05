@@ -6,7 +6,7 @@
 #include "config_reader/config_reader.hpp"
 #include "Status.hpp"
 
-#include "workers/fileWatcher.hpp"
+#include "processes/mainProcess.hpp"
 
 using namespace cdnalizerd;
 
@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
   }
   cdnalizerd::Status status;
   RESTClient::http::spawn([&config, &status](yield_context y) {
-    cdnalizerd::workers::watchForFileChanges(y, status, config);
+    cdnalizerd::processes::watchForFileChanges(y, status, config);
   });
   RESTClient::http::run();
   return 0;
