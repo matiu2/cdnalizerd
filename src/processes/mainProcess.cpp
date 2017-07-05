@@ -2,7 +2,7 @@
 
 #include "../inotify.hpp"
 
-#include "queueWorker.hpp"
+#include "uploader.hpp"
 #include "../AccountCache.hpp"
 #include "../operations/inotifyToJob.hpp"
 
@@ -41,7 +41,7 @@ void queueJob(Job &&job, Status &status, const Config &config, AccountCache& acc
     workers.emplace_back(std::move(worker));
     workers.back().me = --workers.end();
     RESTClient::http::spawn(
-        [&](yield_context y) { queueWorker(y, status, workers.back()); });
+        [&](yield_context y) { uploader(y, status, workers.back()); });
   } else {
     // Find which worker has the least jobs
     auto worker = std::min_element(

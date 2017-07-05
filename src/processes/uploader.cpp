@@ -1,4 +1,4 @@
-#include "queueWorker.hpp"
+#include "uploader.hpp"
 
 #include "../Rackspace.hpp"
 #include "../Status.hpp"
@@ -35,7 +35,7 @@ struct SStringSentry {
   }
 };
 
-void queueWorker(yield_context &yield, Status& status, Worker& worker) {
+void uploader(yield_context &yield, Status& status, Worker& worker) {
 // Find which worker wants this job
   WorkerSentry sentry(worker);
   assert(worker.jobsToDo.size() != 0);
