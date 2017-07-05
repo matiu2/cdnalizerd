@@ -1,0 +1,91 @@
+# Models
+
+## Stuff loaded from the config file
+
+ * Endpoint - loaded from the config file
+   + name - just a label you give it; will appear in the logs
+   + username
+   + apikey
+   + region - can be ord/dfw/iad/hkd/syd/etc..
+   + snet (wether to use the servicenet url)
+
+ * File Pair - loaded from config file
+   + Endpoint
+   + move/copy - should we delete after uploading the file
+   + source-path
+   + destination-container
+   + destination-prefix
+
+## Stuff loaded after startup
+
+ * Endpoint Details - loaded after logging in through the RS API
+   + token - Access token
+   + token-expiry - date when it expires
+   + json (contains connection info for each service (eg. cloud files) and (region) and servicenaet
+   + DFW-url
+   + DFW-snet-url
+   + HKG-url
+   + HKG-snet-url
+   + IAD-url
+   + IAD-snet-url
+   + ORD-url
+   + ORD-snet-url
+   + SYD-url
+   + SYD-snet-url
+
+All of the above is loaded into a single tree.
+
+## Stuff used when live
+
+ * Job
+   + Source file 
+   + Destination prefix
+
+# Operations - These are business level library functions
+
+## Load config file
+
+ * Loads the config file and returns the entries
+
+## Fill in Endpoint details
+
+ * Takes the JSON from the RS login info and returns an Endpoint Details
+
+# Processes - These are long running processes (cooperative (non preemptive) threads)
+
+## Loader
+
+ * Goes through the config
+ * Starts sub workers to load the Endpoint Details for each endpoint
+ * Waits for those to finish
+ * Starts file watcher workers - one for each file pair entry in the config
+ * Ends
+
+## File watcher
+
+ * Takes Endpoint - Endpoint Details - File Pair
+ * Sets up inotify watches for the dir and its sub dirs
+ * Waits for a file to come in
+ * Manages uploading
+   + Holds a list of upload workers
+   + Holds a queue of work to do, which the upload workers read from
+   + 1 job = 1 worker
+   + 2 jobs = 2 workers
+   + 3 jobs = 2 workers
+   + 4 jobs = 2 workers
+   + 5+ jobs = 3 workers
+
+## Upload worker
+
+ * Input:
+   + Url to connect to
+   + Access token
+   + move/copy
+   + destination container
+   + destination prefix
+   + job queue to read from
+ * Reads from a queue of files to process
+ * Connects to Rackspace
+ * Uploads all the files in the job queue
+ * Sleeps one second in case more jobs come in
+ * Disconnects and dies
