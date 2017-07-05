@@ -1,6 +1,7 @@
 /// Bits and pieces that we need
 #pragma once
 
+#include "common.hpp"
 #include "Rackspace.hpp"
 #include "config_reader/config.hpp"
 

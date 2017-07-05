@@ -13,6 +13,6 @@ set_property(
   PROPERTY INCLUDE_DIRECTORIES ${BANDIT_INCLUDE_DIR})
 add_test(test_login test_login)
 
-add_executable(cdnalizerd main.cpp utils.cpp workers/fileWatcher.cpp workers/queueWorker.cpp)
+add_executable(cdnalizerd main.cpp utils.cpp AccountCache.cpp workers/fileWatcher.cpp workers/queueWorker.cpp)
 add_dependencies(cdnalizerd RESTClient2)
 target_link_libraries(cdnalizerd config_reader ${RESTClient} ${Boost_SYSTEM_LIBRARY} ${Boost_COROUTINE_LIBRARY})

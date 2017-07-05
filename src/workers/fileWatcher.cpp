@@ -3,6 +3,7 @@
 #include "../inotify.hpp"
 
 #include "queueWorker.hpp"
+#include "../AccountCache.hpp"
 
 namespace cdnalizerd {
 namespace workers {
@@ -81,19 +82,22 @@ Job handleEvent(Status &status, inotify::Event &&event) {
   return Job{};
 }
 
-void queueJob(Job &&job, Status &status, const Config &config) {
+void queueJob(Job &&job, Status &status, const Config &config, AccountCache& accounts) {
   // Find or create the worker for this job
-  ConnectionMarker marker{job.configuration.username, job.configuration.region};
-  std::list<Worker> workers = status.workers[marker];
+  std::list<Worker> workers =
+      status.workers[{job.configuration.username, job.configuration.region}];
   // We like to have up to 3 workers per connection
   if (workers.size() < 3) {
     // Create a new worker
-    Worker worker(workers);
+    Rackspace& rs = accounts[job.configuration.username];
+    Worker worker(workers, rs);
     worker.jobsToDo.emplace_back(std::move(job));
+    assert(rs.status() == Rackspace::Ready);
+    worker.rs = rs;
     workers.emplace_back(std::move(worker));
     workers.back().me = --workers.end();
     RESTClient::http::spawn(
-        [&](yield_context y) { queueWorker(y, status, config); });
+        [&](yield_context y) { queueWorker(y, status, workers.back()); });
   } else {
     // Find which worker has the least jobs
     auto worker = std::min_element(
@@ -109,6 +113,25 @@ void watchForFileChanges(yield_context &yield, Status &status,
   // Setup
   inotify::Instance inotify(yield);
   readConfig(yield, status, config, inotify);
+  AccountCache accounts;
+
+  // Spawn some workers to fill in the account info (token and urls)
+  boost::asio::deadline_timer waitForLogins(*RESTClient::tcpip::getService(),
+                                            boost::posix_time::minutes(10));
+  int loginWorkers = 2;
+  for (int i = 0; i != loginWorkers; ++i) {
+    RESTClient::http::spawn([&](yield_context y) {
+      fillAccountCache(y, config, accounts, [&loginWorkers, &waitForLogins]() {
+        --loginWorkers;
+        if (loginWorkers == 0)
+          waitForLogins.cancel();
+      });
+    });
+  }
+  // Wait for all the logins to finish
+	waitForLogins.async_wait(yield);
+
+  assert("Logins to Rackspace timed out");
 
   std::list<Job> jobsToDo;
 
@@ -142,7 +165,7 @@ void watchForFileChanges(yield_context &yield, Status &status,
       // Get the next job that needs doing
       Job job{handleEvent(status, std::move(event))};
       // Put it in the right queue
-      queueJob(std::move(job), status, config);
+      queueJob(std::move(job), status, config, accounts);
     }
   }
 }

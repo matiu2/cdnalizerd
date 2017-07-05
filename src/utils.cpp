@@ -9,7 +9,8 @@
 namespace cdnalizerd {
 
 std::string getContainerUrl(const Rackspace &login, const ConfigEntry &config) {
-  assert(login); // Can't watch a dir until we're logged in to rackspace
+  // Can't watch a dir until we're logged in to rackspace
+  assert(login.status() == Rackspace::Ready);
   const json::JList &regions =
       login.loginJSON().at("access").at("serviceCatalog").at("cloudFiles").at(
           "endPoints");

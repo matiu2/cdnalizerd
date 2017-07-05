@@ -24,17 +24,40 @@ using RESTClient::http::Response;
 using RESTClient::REST;
 
 class Rackspace {
+public:
+  enum Status {
+    Fresh,     // Doesn't have a token yet
+    LoggingIn, // Is in the process of logging in
+    Error,     // Login failed
+    Ready      // Logged in ard ready to be used
+  };
 private:
-  yield_context& yield;
   /// Our access token
   std::string _token;
   /// The response from the login endpoint
   json::JSON response;
+  Status _status;
 public:
-  Rackspace(yield_context& yield) : yield(yield) {}
+  Rackspace() : _status(Fresh) {}
+  /// Makes a new API for use by login
+  REST makeAPI(yield_context &yield,
+               std::string url = "https://identity.api.rackspacecloud.com"s) {
+    return REST(yield, url, {{"Content-type", "application/json"},
+                             {"User-Agent", "cdnalizerd 0.2"}});
+  }
   /// Returns true if we are logged in and have an access token
-  operator bool() const { return !_token.empty(); }
-  void login(const std::string &username, const std::string &apikey) {
+  void login(const std::string &username, const std::string &apikey, REST& api) {
+    struct Sentry {
+      Status& s;
+      Sentry(Status& s) : s(s) {
+        s = LoggingIn;
+      }
+      ~Sentry() {
+        if (s == LoggingIn)
+          s = Error;
+      }
+    };
+    Sentry s(_status);
     using namespace json;
     // Create the request
     JSON j(JMap{
@@ -43,9 +66,6 @@ public:
     std::stringstream req_body;
     req_body << j;
     // Get the response
-    REST api(yield, "https://identity.api.rackspacecloud.com"s,
-             {{"Content-type", "application/json"},
-              {"User-Agent", "cdnalizerd 0.2"}});
     Response httpResponse = api.post("/v2.0/tokens").body(req_body).go();
     if (httpResponse.ok != "OK")
       throw LoginFailed("Got bad response from API: " +
@@ -65,5 +85,6 @@ public:
   }
   const json::JSON& loginJSON() const { return response; }
   const std::string& token() const { return _token; }
+  Status status() const { return _status; }
 };
 }

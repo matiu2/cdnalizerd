@@ -1,6 +1,7 @@
 #pragma once
 
 #include "errors.hpp"
+#include "../common.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -12,10 +13,6 @@
 #endif
 
 namespace cdnalizerd {
-
-using strings = std::vector<std::string>;
-
-using sstring = std::shared_ptr<std::string>;
 
 /// Holds a single mapping from a local folder to remote location
 struct ConfigEntry {

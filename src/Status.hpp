@@ -1,16 +1,13 @@
 #pragma once
 
 #include <map>
-#include <unordered_map>
 #include <queue>
 #include <list>
 #include <memory>
 
-#include <boost/functional/hash.hpp>
-
-
 #include <jsonpp11/json_class.hpp>
 
+#include "AccountCache.hpp"
 #include "Rackspace.hpp"
 #include "inotify.hpp"
 #include "config_reader/config.hpp"
@@ -39,48 +36,44 @@ struct Job {
 
 struct Worker {
   // A worker will tend to stick to its same URL so it can reuse the connection
-  bool running = false;
   std::list<Job> jobsToDo;
   std::list<Job> jobsInProgress;
   // Mechanism to stop working when we have no new jobs
   std::list<Worker>& list;
   std::list<Worker>::const_iterator me;
-  void die() {
-    list.erase(me);
-  }
+  // Info for making connections
+  Rackspace& rs;
+  void die() { list.erase(me); }
   // Constructor
-  Worker(std::list<Worker>& list) : list(list) {}
+  Worker(std::list<Worker>& list, Rackspace& rs) : list(list), rs(rs) {}
 };
 
-
-struct ConnectionMarker {
+// The two things that a connection type needs to be unique
+struct ConnectionInfo {
   sstring username;
   sstring region;
-
-  // Hashing for std::unordered_map
-  struct Hash {
-    size_t operator()(const ConnectionMarker& in) const {
-      size_t result = 0;
-      boost::hash_combine(result, boost::hash_value(in.username ? *in.username : ""));
-      boost::hash_combine(result, boost::hash_value(in.region ? *in.region : ""));
-      return result;
-    }
-  };
-  bool operator==(const ConnectionMarker &other) const {
-    return ((username ? *username : ""s) ==
-            (other.username ? *other.username : ""s)) &&
-           ((region ? *region : ""s) == (other.region ? *other.region : ""s));
+  bool operator<(const ConnectionInfo& other) const {
+    std::string empty;
+    const std::string& username1(username ? *username : empty);
+    const std::string& region1(region ? *region : empty);
+    const std::string& username2(username ? *other.username : empty);
+    const std::string& region2(region ? *other.region : empty);
+    if (username1 < username2)
+      return true;
+    if (username1 == username2)
+      return region1 < region2;
+    return false;
   }
 };
 
 /// Status of the whole app; one instance will be shared by all the workers
 struct Status {
-  std::unordered_map<std::string, std::pair<std::string, json::JSON>>
+  std::map<std::string, std::pair<std::string, json::JSON>>
       logins; // maps username to {token, login_json} pair
   std::map<uint32_t, ConfigEntry> watchToConfig; // Maps inotify watch handles to config entries
   /// Holds file move operations that are waiting for a pair
   std::map<uint32_t, inotify::Event> cookies;
-  std::unordered_map<ConnectionMarker, std::list<Worker>, ConnectionMarker::Hash> workers;
+  std::map<ConnectionInfo, std::list<Worker>> workers;
 };
 
 } /* cdnalizerd  */ 

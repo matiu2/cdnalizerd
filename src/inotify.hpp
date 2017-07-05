@@ -10,7 +10,6 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/posix/stream_descriptor.hpp>
 #include <boost/asio/read.hpp>
-#include <boost/asio/spawn.hpp>
 #include <boost/asio/streambuf.hpp>
 #include <boost/optional.hpp>
 
@@ -19,9 +18,9 @@
 #include "utils.hpp"
 #include "config_reader/config.hpp"
 
+namespace cdnalizerd {
+  
 namespace inotify {
-
-using RESTClient::http::yield_context;
 
 /// A watch on a single directory
 class Watch {
@@ -218,3 +217,4 @@ struct Instance {
   }
 };
 }
+} /* cdnalizerd  */ 

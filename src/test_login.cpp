@@ -23,13 +23,14 @@ int testLogin(yield_context yield) {
   std::stringstream output;
   auto creds = getCredentials();
   int result = 0;
-  Rackspace rs(yield);
+  Rackspace rs;
   using namespace std;
   if (!rs.token().empty()) {
     ++result;
     cerr << "Expected RS token to be empty at the start" << endl;
   }
-  rs.login(creds.first, creds.second);
+  REST api(rs.makeAPI(yield));
+  rs.login(creds.first, creds.second, api);
   if (rs.token().empty()) {
     ++result;
     cerr << "Token is empty after login attempt" << endl;
