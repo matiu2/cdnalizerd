@@ -1,3 +1,38 @@
+# Worker management
+
+Jobs will come from two sources:
+
+ * The mainProcess (file change watcher)
+ * Start up (where we sync everything)
+
+There are two resources that we want to protect:
+
+ * Connection overhead - we want to reuse current connections
+ * Delay after uploading a file - with cloud files after uploading there's a 1.5 or second delay before the API server returns 200 OK 
+
+As a sysadmin we care about:
+
+ * Not flooding the network - Currently we just set max uploaders, we could later on set a max upload speed
+ * Not flooding disk IO - we may have to deal with big files and uploading in chunks
+ * Not flooding CPU - shouldn't be a problem
+
+Version 1 plan:
+
+ * A global uploader manager will hold
+   + map of username -> uploader worker list
+   + map of username -> jobsToDo
+ * When a new job is added, it will check:
+   + If there are zero upload workers for that URL, launch one
+   + If there are any upload workers for that URL that are idle, (sleeping after uploading), wake one up
+   + If there are max_workers_per_url already open and busy, just add it to their queue
+   + If there are max_upload_workers busy, and there is no worker for that url, start at least one, then add it to the queue
+
+Later improvements:
+
+ * Configurable options for max_upload_workers and max_workers_per_url
+ * Bandwidth limiting
+ * Smarter worker counting, maybe maybe worker size should be 50% of queue_size + 1
+
 # Models
 
 ## Stuff loaded from the config file

@@ -3,9 +3,8 @@
 
 #include <fstream>
 
+#include "globals.hpp"
 #include "config_reader/config_reader.hpp"
-#include "Status.hpp"
-
 #include "processes/mainProcess.hpp"
 
 using namespace cdnalizerd;
@@ -16,7 +15,7 @@ int main(int argc, char **argv) {
   if (argc == 2)
     config_file_name = argv[1];
   std::ifstream config_file(config_file_name);
-  Config config = read_config(config_file);
+  config = read_config(config_file);
   config_file.close();
   // Ensure we have a config
   if (!config) {
@@ -41,10 +40,7 @@ int main(int argc, char **argv) {
             "(defaults to off)" << endl;
     return 1;
   }
-  cdnalizerd::Status status;
-  RESTClient::http::spawn([&config, &status](yield_context y) {
-    cdnalizerd::processes::watchForFileChanges(y, status, config);
-  });
+  RESTClient::http::spawn(cdnalizerd::processes::watchForFileChanges);
   RESTClient::http::run();
   return 0;
 }

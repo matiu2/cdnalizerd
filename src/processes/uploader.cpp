@@ -3,6 +3,7 @@
 #include "../Rackspace.hpp"
 #include "../Status.hpp"
 #include "../config_reader/config.hpp"
+#include "../globals.hpp"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
@@ -35,13 +36,11 @@ struct SStringSentry {
   }
 };
 
-void uploader(yield_context &yield, Status& status, Worker& worker) {
-// Find which worker wants this job
+void uploader(yield_context yield, Worker& worker) {
+  // Find which worker wants this job
   WorkerSentry sentry(worker);
   assert(worker.jobsToDo.size() != 0);
   auto job = worker.jobsToDo.begin();
-
-
   while (job != worker.jobsToDo.end()) {
     job->configuration.username;
   }

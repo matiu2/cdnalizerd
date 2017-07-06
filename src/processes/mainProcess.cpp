@@ -6,14 +6,15 @@
 #include "../AccountCache.hpp"
 #include "../operations/inotifyToJob.hpp"
 
+#include "../globals.hpp"
+
 namespace cdnalizerd {
 namespace processes {
 
 constexpr int maskToFollow =
     IN_CREATE | IN_CLOSE_WRITE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO;
 
-void readConfig(yield_context &yield, Status &status, const Config &config,
-                inotify::Instance &inotify) {
+void readConfig(inotify::Instance &inotify) {
   for (const ConfigEntry &entry : config.entries()) {
     // Starts watching a directory
     inotify::Watch &watch =
@@ -26,7 +27,7 @@ void readConfig(yield_context &yield, Status &status, const Config &config,
   }
 }
 
-void queueJob(Job &&job, Status &status, const Config &config, AccountCache& accounts) {
+void queueJob(Job &&job, AccountCache& accounts) {
   // Find or create the worker for this job
   std::list<Worker> workers =
       status.workers[{job.configuration.username, job.configuration.region}];
@@ -41,7 +42,7 @@ void queueJob(Job &&job, Status &status, const Config &config, AccountCache& acc
     workers.emplace_back(std::move(worker));
     workers.back().me = --workers.end();
     RESTClient::http::spawn(
-        [&](yield_context y) { uploader(y, status, workers.back()); });
+        [&](yield_context y) { uploader(y, workers.back()); });
   } else {
     // Find which worker has the least jobs
     auto worker = std::min_element(
@@ -52,11 +53,10 @@ void queueJob(Job &&job, Status &status, const Config &config, AccountCache& acc
   }
 }
 
-void watchForFileChanges(yield_context &yield, Status &status,
-                         const Config &config) {
+void watchForFileChanges(yield_context yield) {
   // Setup
   inotify::Instance inotify(yield);
-  readConfig(yield, status, config, inotify);
+  readConfig(inotify);
   AccountCache accounts;
 
   // Spawn some workers to fill in the account info (token and urls)
@@ -107,9 +107,9 @@ void watchForFileChanges(yield_context &yield, Status &status,
         inotify.addWatch(path.c_str(), maskToFollow);
     } else {
       // Get the next job that needs doing
-      Job job{inotifyEventToJob(status, std::move(event))};
+      Job job{inotifyEventToJob(std::move(event))};
       // Put it in the right queue
-      queueJob(std::move(job), status, config, accounts);
+      queueJob(std::move(job), accounts);
     }
   }
 }

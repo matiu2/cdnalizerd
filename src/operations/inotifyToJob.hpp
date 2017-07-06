@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../Status.hpp"
+#include "../globals.hpp"
 
 namespace cdnalizerd {
 
-Job inotifyEventToJob(Status &status, inotify::Event &&event) {
+Job inotifyEventToJob(inotify::Event &&event) {
   const ConfigEntry &entry = status.watchToConfig[event.watch().handle()];
   // This may be a move or uplod operation
   Operation uploadOperation = entry.move ? Move : Upload;
