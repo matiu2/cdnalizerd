@@ -1,4 +1,5 @@
 #pragma once
+/// Gets auth tokens for all the accounts
 
 #include "common.hpp"
 #include "Rackspace.hpp"
@@ -10,7 +11,6 @@
 
 namespace cdnalizerd {
 
-
 struct CompareSharedPtr {
   bool operator()(const sstring &a, const sstring &b) const {
     return ((a ? *a : "") < (b ? *b : ""));
@@ -19,7 +19,8 @@ struct CompareSharedPtr {
 
 using AccountCache = std::map<sstring, Rackspace, CompareSharedPtr>;
 
-/// Worker that fills an account cache by logging on to all the RS accounts and getting the token and json
+/// Worker that fills an account cache by logging on to all the RS accounts and
+/// getting the token and json
 void fillAccountCache(yield_context &yield, const Config &config,
                       AccountCache &cache, std::function<void()> onDone);
 

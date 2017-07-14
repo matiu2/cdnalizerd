@@ -4,45 +4,51 @@
 #include "../Status.hpp"
 #include "../config_reader/config.hpp"
 #include "../globals.hpp"
+#include "../Worker.hpp"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <ifstream>
 
 #include <RESTClient/rest.hpp>
 
 namespace cdnalizerd {
 namespace processes {
 
-// Struct that removes workers from their list when we're done with them
+using RESTClient::http::URL;
+using RESTClient::http::Response;
+using RESTClient::REST;
+
+// Removes workers from our list when we're done with them
 struct WorkerSentry {
   Worker& worker;
   WorkerSentry(Worker& worker) : worker(worker) {}
   ~WorkerSentry() {
-    worker.die();
+    worker.onDone()();
   }
 };
 
-/// Sets the shared string for the token to empty, then if you don't fill it, it deletes it
-struct SStringSentry {
-  sstring& value;
-  SStringSentry(sstring &value) : value(value) {
-    assert(!value); // Should start off unset
-    value.reset(new std::string());
-  }
-  ~SStringSentry() {
-    // You shouldn't unset the value while we're holding it
-    assert(value);
-    if (value->empty())
-      value.reset();
-  }
-};
+void handleJob(const Job& job, REST& conn) {
+  switch (job.operation) {
+    case Upload: {
+      std::ifstream file(job.source);
+      conn.put(job.dest).body(file).go();
+    }
+  };
+}
 
 void uploader(yield_context yield, Worker& worker) {
   // Find which worker wants this job
   WorkerSentry sentry(worker);
-  assert(worker.jobsToDo.size() != 0);
-  auto job = worker.jobsToDo.begin();
-  while (job != worker.jobsToDo.end()) {
-    job->configuration.username;
+  // Grab the first job in the queue
+  auto job(worker.getNextJob());
+  // Grab the url that we're to connect to
+  const std::string& url = job.workerURL();
+  // Connect
+  REST connection(yield, job.workerURL(), {{"Content-type", "application/json"},
+                                           {"X-Auth-Token", worker.token()}});
+  handleJob(job);
+  while (worker.hasMoreJobs()) {
+    Job job{worker.getNextJob()};
   }
 }
 

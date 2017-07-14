@@ -4,7 +4,7 @@
 
 #include "uploader.hpp"
 #include "../AccountCache.hpp"
-#include "../operations/inotifyToJob.hpp"
+#include "../WorkerManager.hpp"
 
 #include "../globals.hpp"
 
@@ -14,12 +14,19 @@ namespace processes {
 constexpr int maskToFollow =
     IN_CREATE | IN_CLOSE_WRITE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO;
 
-void readConfig(inotify::Instance &inotify) {
+// Maps an inotify cookie to the event that last had that cookie
+using Cookies = std::map<uint32_t, inotify::Event>;
+
+// Maps inotify watch handles to config entries
+using WatchToConfig = std::map<uint32_t, ConfigEntry>; 
+
+/// Reads our configuration object and creates all the inotify watches needed
+void createINotifyWatches(inotify::Instance &inotify, WatchToConfig& watchToConfig) {
   for (const ConfigEntry &entry : config.entries()) {
     // Starts watching a directory
     inotify::Watch &watch =
         inotify.addWatch(entry.local_dir.c_str(), maskToFollow);
-    status.watchToConfig[watch.handle()] = entry;
+    watchToConfig[watch.handle()] = entry;
     walkDir(entry.local_dir.c_str(), [&](const char *path) {
       if (!inotify.alreadyWatching(path))
         inotify.addWatch(path, maskToFollow);
@@ -27,36 +34,14 @@ void readConfig(inotify::Instance &inotify) {
   }
 }
 
-void queueJob(Job &&job, AccountCache& accounts) {
-  // Find or create the worker for this job
-  std::list<Worker> workers =
-      status.workers[{job.configuration.username, job.configuration.region}];
-  // We like to have up to 3 workers per connection
-  if (workers.size() < 3) {
-    // Create a new worker
-    Rackspace& rs = accounts[job.configuration.username];
-    Worker worker(workers, rs);
-    worker.jobsToDo.emplace_back(std::move(job));
-    assert(rs.status() == Rackspace::Ready);
-    worker.rs = rs;
-    workers.emplace_back(std::move(worker));
-    workers.back().me = --workers.end();
-    RESTClient::http::spawn(
-        [&](yield_context y) { uploader(y, workers.back()); });
-  } else {
-    // Find which worker has the least jobs
-    auto worker = std::min_element(
-        workers.begin(), workers.end(), [](const Worker &a, const Worker &b) {
-          return a.jobsToDo.size() < b.jobsToDo.size();
-        });
-    worker->jobsToDo.emplace_back(std::move(job));
-  }
-}
-
 void watchForFileChanges(yield_context yield) {
   // Setup
   inotify::Instance inotify(yield);
-  readConfig(inotify);
+  // Maps inotify watch handles to config entries
+  std::map<uint32_t, ConfigEntry> watchToConfig;
+  createINotifyWatches(inotify, watchToConfig);
+
+  // Account login information
   AccountCache accounts;
 
   // Spawn some workers to fill in the account info (token and urls)
@@ -72,25 +57,34 @@ void watchForFileChanges(yield_context yield) {
       });
     });
   }
+
   // Wait for all the logins to finish
-	waitForLogins.async_wait(yield);
+  waitForLogins.async_wait(yield);
 
   assert("Logins to Rackspace timed out");
 
   std::list<Job> jobsToDo;
 
+  /// Holds file move operations that are waiting for a pair
+  std::map<uint32_t, inotify::Event> cookies;
+
+  WorkerManager workers;
+
   while (true) {
     inotify::Event event = inotify.waitForEvent();
     // If it's a move event, find its pair
     if (event.cookie) {
-      auto found = status.cookies.find(event.cookie);
-      if (found != status.cookies.end()) {
+      auto found = cookies.find(event.cookie);
+      if (found != cookies.end()) {
         if (event.wasMovedTo())
           std::swap(event, found->second);
         if (event.wasMovedFrom())
           event.destination.reset(new inotify::Event(std::move(found->second)));
-        /// TODO: Log a runtime error here, only move events should have cookies
-        status.cookies.erase(found);
+        else {
+          /// TODO: Log a runtime error here, only move events should have
+          /// cookies
+          cookies.erase(found);
+        }
       } else {
         // The event's partner hasn't been found yet.
         // Store it in cookies; start another worker that'll wait 1 second, then
@@ -106,14 +100,44 @@ void watchForFileChanges(yield_context yield) {
       if (isDir(path.c_str()))
         inotify.addWatch(path.c_str(), maskToFollow);
     } else {
-      // Get the next job that needs doing
-      Job job{inotifyEventToJob(std::move(event))};
-      // Put it in the right queue
-      queueJob(std::move(job), accounts);
+      // Create the job
+      const ConfigEntry &entry = watchToConfig[event.watch().handle()];
+      Rackspace &rs = accounts[entry.username];
+      Job job{entry.move ? Move : Upload,
+              joinPaths(entry.local_dir, event.path(),
+                        joinPaths(rs.getURL(*entry.region), *entry.container,
+                                  entry.remote_dir,
+                                  unJoinPaths(entry.local_dir, event.path())))};
+      // If this event is a move and has a destionation..
+      if (event.wasMovedFrom()) {
+        if (event.destination) {
+          // This may be a server side rename (copy + delete)
+          const ConfigEntry &dest =
+              watchToConfig[event.destination->watch().handle()];
+          // The original job should be a server side copy
+          job.operation = Copy;
+          job.dest = joinPaths(rs.getURL(*dest.region), *dest.container,
+                                dest.remote_dir,
+                                unJoinPaths(dest.local_dir, event.path()));
+          // The follow up job is the server side delete
+          job.next.reset(new Job{SDelete, job.source});
+        } else {
+          // This file was moved out of our known directory space, delete it
+          // from the server
+          job.operation = SDelete;
+          job.dest.clear();
+        }
+        // Put it in the right queue
+        auto worker = workers.getWorker(job.workerURL(), rs);
+        worker->addJob(std::move(job));
+      } else if (event.wasDeleted()) {
+        job.operation = SDelete;
+        job.source.swap(job.dest);
+        job.dest.clear();
+      }
     }
   }
 }
-    
 
 } /* processes  */ 
 } /* cdnalizerd  */ 

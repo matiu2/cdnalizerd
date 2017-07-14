@@ -7,7 +7,8 @@
 
 namespace cdnalizerd {
 
-void fillAccountCache(yield_context& yield, const Config& config, AccountCache& cache, std::function<void()> onDone) {
+void fillAccountCache(yield_context &yield, const Config &config,
+                      AccountCache &cache, std::function<void()> onDone) {
   for (const ConfigEntry& configEntry : config.entries()) {
     Rackspace &rs = cache[configEntry.username];
     REST api(rs.makeAPI(yield));

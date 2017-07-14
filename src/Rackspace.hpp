@@ -37,6 +37,8 @@ private:
   /// The response from the login endpoint
   json::JSON response;
   Status _status;
+  /// Maps cloud files region to URLs
+  std::map<std::string, std::string> cloudFilesURLs;
 public:
   Rackspace() : _status(Fresh) {}
   /// Makes a new API for use by login
@@ -82,9 +84,26 @@ public:
     if (_token.empty())
       throw LoginFailed(std::string("Empty access token. Response: ") +
                         response.toString());
+    // Fill in the cloudFiles URLs
+    JList& catalog(response["access"]["serviceCatalog"]);
+    for (JMap& entry : catalog) {
+      if (entry["name"] == "cloudFiles") {
+        JList& endpoints(entry["endpoints"]);
+        // There will only be one endpoint in the list
+        assert(endpoints.size() == 1);
+        JMap& endpoint(endpoints[0]);
+        cloudFilesURLs[endpoint["region"]] = endpoint["publicURL"];
+      }
+    }
   }
   const json::JSON& loginJSON() const { return response; }
   const std::string& token() const { return _token; }
   Status status() const { return _status; }
+  /// Returns the cloud files url for your region
+  const std::string& getURL(const std::string& region) {
+    assert(status() == Ready);
+    return cloudFilesURLs[region];
+  }
+
 };
 }
