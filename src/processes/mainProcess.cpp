@@ -115,7 +115,7 @@ void watchForFileChanges(yield_context yield) {
           const ConfigEntry &dest =
               watchToConfig[event.destination->watch().handle()];
           // The original job should be a server side copy
-          job.operation = Copy;
+          job.operation = SCopy;
           job.dest = joinPaths(rs.getURL(*dest.region), *dest.container,
                                 dest.remote_dir,
                                 unJoinPaths(dest.local_dir, event.path()));

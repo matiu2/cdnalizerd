@@ -8,7 +8,7 @@ namespace cdnalizerd {
 enum Operation {
   Upload,  // Upload from local source to url dest
   Move,    // Upload from local source to url dest, then delete local source
-  Copy,    // Server side copy from url source to url dest
+  SCopy,    // Server side copy from url source to url dest
   SDelete, // Server side Delete url source (ignore dest)
 };
 
@@ -27,7 +27,7 @@ struct Job {
       case Upload:
       case Move:
         return dest;
-      case Copy:
+      case SCopy:
       case SDelete:
         return source;
     };

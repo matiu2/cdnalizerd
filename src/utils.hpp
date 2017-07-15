@@ -22,7 +22,8 @@ template <typename... T>
 std::string joinPaths(T...aParams) {
   auto params = boost::hana::make_tuple(aParams...);
   return boost::hana::fold(params, [](std::string a, const std::string &b) {
-    if ((!a.empty()) && (a.back() == '/'))
+    if (((!a.empty()) && (a.back() == '/')) ||
+        ((!b.empty()) && (b.front() == '/')))
       return a + b;
     else
       return a + '/' + b;

@@ -8,13 +8,29 @@
 
 namespace cdnalizerd {
 
-class Worker {
+enum WorkerState { Raw, Ready, Working, Idle, Dead };
+
+class StateSentry {
+private:
+  WorkerState& state;
+  bool aborted;
 public:
-  enum State { Raw, Ready, Working, Idle };
+  StateSentry(WorkerState &state) : state(state), aborted(false) {}
+  void abort() {
+    aborted = true;
+  }
+  ~StateSentry() {
+    if (!aborted)
+      state = Dead;
+  }
+  void updateState(WorkerState newState) { state = newState; }
+};
+
+class Worker {
 private:
   // Info for making connections
   Rackspace& rs;
-  State _state;
+  WorkerState _state;
   // Mechanism to stop working when we have no new jobs
   std::function<void()> _onDone;
   // A worker will tend to stick to its same URL so it can reuse the connection
@@ -25,7 +41,7 @@ public:
   // Consstructor
   Worker(Rackspace& rs) : rs(rs), _state(Raw) {}
   void launch(std::function<void()> onDone);
-  State state() const { return _state; }
+  WorkerState state() const { return _state; }
   bool idle() const { return (_state == Ready) || (_state == Idle); }
   size_t queueSize() const { return _queue.size(); }
   void addJob(Job&& job) {
@@ -43,7 +59,12 @@ public:
   }
   bool hasMoreJobs() const { return _queue.size() > 0; }
   const std::string &token() const { return rs.token(); }
+  StateSentry setState(WorkerState newState) {
+    _state = newState;
+    return StateSentry(_state);
+  }
 };
+
 
 } /* cdnalizerd */ 
 

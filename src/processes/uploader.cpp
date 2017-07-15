@@ -7,9 +7,12 @@
 #include "../Worker.hpp"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <ifstream>
+#include <boost/asio/deadline_timer.hpp>
+#include <fstream>
+#include <stdio.h>
 
 #include <RESTClient/rest.hpp>
+#include <RESTClient/tcpip/interface.hpp>
 
 namespace cdnalizerd {
 namespace processes {
@@ -27,30 +30,70 @@ struct WorkerSentry {
   }
 };
 
-void handleJob(const Job& job, REST& conn) {
+void handleJob(Job&& job, REST& conn) {
+  URL source(job.source);
+  URL dest(job.dest);
   switch (job.operation) {
     case Upload: {
       std::ifstream file(job.source);
-      conn.put(job.dest).body(file).go();
+      conn.put(dest.path_part()).body(file).go();
+      break;
+    }
+    case Move: {
+      {
+        std::ifstream file(job.source);
+        conn.put(dest.path_part()).body(file).go();
+      }
+      // Delete the source file
+      remove(job.dest.c_str());
+      break;
+    }
+    case SCopy: {
+      if (source.hostname != dest.hostname) {
+        // TODO: support a download, then upload copy ?
+        throw std::runtime_error("We don't support server side copy between two different hosts");
+      }
+      conn.put(dest.path_part()).add_header("X-Copy-From", source.path_part()).go();
+      break;
+    }
+    case SDelete: {
+      conn.delet(source.path_part()).go();
     }
   };
 }
 
-void uploader(yield_context yield, Worker& worker) {
+void uploader(yield_context yield, Worker &worker) {
   // Find which worker wants this job
   WorkerSentry sentry(worker);
   // Grab the first job in the queue
-  auto job(worker.getNextJob());
-  // Grab the url that we're to connect to
-  const std::string& url = job.workerURL();
+  Job job(worker.getNextJob());
   // Connect
-  REST connection(yield, job.workerURL(), {{"Content-type", "application/json"},
-                                           {"X-Auth-Token", worker.token()}});
-  handleJob(job);
-  while (worker.hasMoreJobs()) {
-    Job job{worker.getNextJob()};
+  RESTClient::http::URL url(job.workerURL());
+  REST conn(yield, url.host_part(), {{"Content-type", "application/json"},
+                                     {"X-Auth-Token", worker.token()}});
+  auto stateSentry = worker.setState(Working);
+  handleJob(std::move(job), conn);
+  do {
+    job = {worker.getNextJob()};
+    handleJob(std::move(job), conn);
+    if (!worker.hasMoreJobs()) {
+      // If we have no more work to do, keep the connection open for some time 
+      stateSentry.updateState(Idle);
+      boost::asio::deadline_timer idleTimer(*RESTClient::tcpip::getService(),
+                                            boost::posix_time::seconds(20));
+      idleTimer.async_wait(yield);
+      if (worker.hasMoreJobs())
+        stateSentry.updateState(Working);
+      else {
+        stateSentry.updateState(Dead);
+        break;
+      }
+    }
   }
-}
 
-} /* processes */ 
-} /* cdnalizerd  */ 
+          while (worker.hasMoreJobs());
+
+
+}
+} /* processes */
+} /* cdnalizerd  */
