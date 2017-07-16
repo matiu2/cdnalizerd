@@ -1,12 +1,15 @@
 #include "mainProcess.hpp"
 
 #include "../inotify.hpp"
+#include "../logging.hpp"
 
 #include "uploader.hpp"
 #include "../AccountCache.hpp"
 #include "../WorkerManager.hpp"
 
 #include "../globals.hpp"
+
+#include <boost/log/trivial.hpp>
 
 namespace cdnalizerd {
 namespace processes {
@@ -35,6 +38,7 @@ void createINotifyWatches(inotify::Instance &inotify, WatchToConfig& watchToConf
 }
 
 void watchForFileChanges(yield_context yield) {
+  BOOST_LOG_TRIVIAL(info) << "Creating inotify watches...";
   // Setup
   inotify::Instance inotify(yield);
   // Maps inotify watch handles to config entries
@@ -45,6 +49,7 @@ void watchForFileChanges(yield_context yield) {
   AccountCache accounts;
 
   // Spawn some workers to fill in the account info (token and urls)
+  BOOST_LOG_TRIVIAL(info) << "Getting API Authentication tokens...";
   boost::asio::deadline_timer waitForLogins(*RESTClient::tcpip::getService(),
                                             boost::posix_time::minutes(10));
   int loginWorkers = 2;
@@ -61,7 +66,8 @@ void watchForFileChanges(yield_context yield) {
   // Wait for all the logins to finish
   waitForLogins.async_wait(yield);
 
-  assert("Logins to Rackspace timed out");
+  // Logins to Rackspace timed out
+  assert(loginWorkers == 0);
 
   std::list<Job> jobsToDo;
 

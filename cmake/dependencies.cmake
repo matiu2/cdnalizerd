@@ -1,9 +1,11 @@
 
 include(ExternalProject)
 
+## Threads
+find_package (Threads)
+
 ## Boost
-FIND_PACKAGE(Boost REQUIRED
-             COMPONENTS system coroutine)
+FIND_PACKAGE(Boost 1.58 REQUIRED system log corountine asio)
 IF (Boost_FOUND)
     INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
 ENDIF()
