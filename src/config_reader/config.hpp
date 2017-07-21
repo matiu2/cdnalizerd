@@ -81,7 +81,7 @@ private:
 
 public:
   void addUsername(std::string username) { lastEntry.username.reset(new std::string(std::move(username))); }
-  void addApikey(std::string apikey) { lastEntry.apikey.reset(new std::string(std::move(apikey))); }
+  void addApiKey(std::string apikey) { lastEntry.apikey.reset(new std::string(std::move(apikey))); }
   void addRegion(std::string region) { lastEntry.region.reset(new std::string(std::move(region))); }
   void addContainer(std::string container) { lastEntry.container.reset(new std::string(std::move(container))); }
   /// Toggles service net on and off

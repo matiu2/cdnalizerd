@@ -5,10 +5,10 @@ project (cdnalizerd)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -stdlib=libc++")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 -fstandalone-debug -fwritable-strings -fno-builtin")
 
+include_directories("/usr/include/libcxxabi")
+
 add_definitions(-DBOOST_COROUTINE_NO_DEPRECATION_WARNING)
 add_definitions(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING)
-
-include_directories("/usr/include/libcxxabi")
 
 # This is just for youcompleteme vim plugin
 set(CMAKE_EXPORT_COMPILE_COMMANDS "ON")

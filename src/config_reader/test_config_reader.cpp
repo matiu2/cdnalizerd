@@ -2,6 +2,8 @@
 #include "config_reader.hpp"
 #include "errors.hpp"
 #include <bandit/bandit.h>
+#include <boost/filesystem.hpp>
+#include <fstream>
 #include <sstream>
 #include <string>
 
@@ -14,19 +16,25 @@ go_bandit([]() {
   using snowhouse::Contains;
 
   describe("config_reader", [&]() {
-    it("1. Can read an empty config", [&] {
-      std::stringstream empty;
-      Config a = read_config(empty);
-    });
-    it("2. Can read a full entry", [&] {
-      std::stringstream config;
+    it("2. Can read an ini file", [&] {
+      std::ofstream config("tmp.ini");
+      config << "[endpoint-main]\n";
       config << "username=james_bond\n";
       config << "apikey=key key key\n";
       config << "container=    the.box    \n";
       config << "region=ORD\n";
-      config << "/images /remote_images\n";
-      config << "/videos /videos\n";
-      Config c = read_config(config);
+      config << "\n";
+      config << "[pair-main-1]\n";
+      config << "endpoint = main\n";
+      config << "local_dir = /images\n";
+      config << "remote_dir = /remote_images\n";
+      config << "\n";
+      config << "[pair-main-2]\n";
+      config << "endpoint = main\n";
+      config << "local_dir = /videos\n";
+      config << "remote_dir = /videos\n";
+      config.close();
+      Config c = read_config("tmp.ini");
       // One entry per path line
       AssertThat(c.entries().size(), Equals(2u));
       const auto& entry = c.entries().front();
@@ -36,61 +44,34 @@ go_bandit([]() {
       AssertThat(*entry.region, Equals("ORD"));
       AssertThat(entry.local_dir, Equals("/images"));
       AssertThat(entry.remote_dir, Equals("/remote_images"));
-    });
-    it("5. hates bad setting names", [&] {
-      std::stringstream config;
-      config << "xxx=james_bond";
-      AssertThrows(ConfigError, read_config(config));
-      std::string msg = LastException<ConfigError>().what();
-      AssertThat(msg, Contains("Unkown setting"));
-      AssertThat(msg, Contains("on line 1"));
-    });
-    it("6. knows that paths depend on containers, regions and auth", [&] {
-      std::stringstream config;
-      config << "/path1 /path2";
-      AssertThrows(ConfigError, read_config(config));
-      std::string msg = LastException<ConfigError>().what();
-      AssertThat(msg, Equals("Need to have a valid username, apikey, region "
-                             "and container before adding a path pair"));
+      AssertThat(entry.snet, Equals(false));
     });
 
-    std::string starter{R"(
-            username=hello
-            apikey=1234
-            container=publish
-            region=SYD
-        )"};
-
-    it("7. Can read a simple path pair", [&] {
-      std::stringstream config;
-      config << starter;
-      config << "/source/path /destination/path" << std::endl;
-      Config c = read_config(config);
-      const ConfigEntry &e = c.getEntryByPath("/source/path");
-      AssertThat(*e.username, Equals("hello"));
-      AssertThat(*e.apikey, Equals("1234"));
-      AssertThat(*e.container, Equals("publish"));
-      AssertThat(*e.region, Equals("SYD"));
-      AssertThat(e.local_dir, Equals("/source/path"));
-      AssertThat(e.remote_dir, Equals("/destination/path"));
-    });
-
-    std::string service_net{R"(
-            # snet defaults to off
-            username=hello
-            apikey=1234
-            container=publish
-            region=SYD
-            /source/path /destination/path
-        )"};
-
-    it("8. Knows about service_net", [&] {
-      std::stringstream config;
-      config << starter << std::endl << "/source/path /destination/path"
-             << std::endl << "# Now we'll try with snet" << std::endl
-             << "snet=true" << std::endl << "/source/path2 /destination/path2"
-             << std::endl;
-      Config c = read_config(config);
+    it("8. Knows about service_net and can read a .info file ", [&]() {
+      std::ofstream config("tmp.info");
+      config << "server-main {\n"
+             << "  username hello\n"
+             << "  apikey 1234\n"
+             << "  container publish\n"
+             << "  region SYD\n"
+             << "  pair {\n"
+             << "    local_dir /source/path\n"
+             << "    remote_dir /destination/path\n"
+             << "  }\n"
+             << "}\n\n"
+             << "server-snet {\n"
+             << "  username hello\n"
+             << "  apikey 1234\n"
+             << "  container publish\n"
+             << "  region SYD\n"
+             << "  snet true\n"
+             << "  pair {\n"
+             << "    local_dir /source/path2\n"
+             << "    remote_dir /destination/path2\n"
+             << "  }\n"
+             << "}\n";
+      config.close();
+      Config c = read_config("tmp.info");
       const ConfigEntry &e = c.getEntryByPath("/source/path");
       AssertThat(*e.username, Equals("hello"));
       AssertThat(*e.apikey, Equals("1234"));
@@ -111,4 +92,17 @@ go_bandit([]() {
   });
 });
 
-int main(int argc, char **argv) { return bandit::run(argc, argv); }
+int main(int argc, char **argv) {
+  namespace fs = boost::filesystem;
+  fs::path dir("tmp.info");
+  if (fs::is_directory(dir)) {
+    std::cout << "Dir: " << std::endl;
+    fs::directory_iterator end;
+    for (auto f = fs::directory_iterator(dir); f != end; ++f)
+      std::cout << f->path().native() << std::endl;
+  } else {
+    // This isn't a directory name, it's a filename
+    std::cout << "File: " << dir.native() << std::endl;
+  }
+  return bandit::run(argc, argv);
+}

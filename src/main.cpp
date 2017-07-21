@@ -14,9 +14,7 @@ int main(int argc, char **argv) {
   std::string config_file_name = "/etc/cdnalizerd.conf";
   if (argc == 2)
     config_file_name = argv[1];
-  std::ifstream config_file(config_file_name);
-  config = read_config(config_file);
-  config_file.close();
+  config = read_config(config_file_name);
   // Ensure we have a config
   if (!config) {
     using namespace std;

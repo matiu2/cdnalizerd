@@ -2,13 +2,53 @@
 include(ExternalProject)
 
 ## Threads
-find_package (Threads)
+find_package(Threads)
 
 ## Boost
-FIND_PACKAGE(Boost 1.58 REQUIRED system log corountine asio)
-IF (Boost_FOUND)
-    INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
-ENDIF()
+## We need to compile our own boost, because we need clang's libc++, which is
+## not compatible with the gcc standard library. If we link them together we
+## get segfaults and other horrors
+
+## clang libc++
+FIND_LIBRARY(CPP c++)
+
+## Boost hana (not yet available in 1.58) (header only library)
+ExternalProject_Add(boost
+    PREFIX 3rd_party
+    URL "http://dl.bintray.com/boostorg/release/1.64.0/source/boost_1_64_0.tar.bz2"
+    URL_MD5 93eecce2abed9d2442c9676914709349
+    SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/boost_1_64_0/
+    BUILD_IN_SOURCE 1
+    CONFIGURE_COMMAND ./bootstrap.sh --with-toolset=clang --with-icu cxxflags="-stdlib=libc++ -I/usr/include/c++/v1 -I/usr/include/libcxxabi"  linkflags="-stdlib=libc++ -L\"${CPP}\""
+    BUILD_COMMAND ./b2 --layout=tagged toolset=clang  variant=release threading=multi runtime-link=static link=static 
+    BUILD_BYPRODUCTS "${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/boost_1_64_0/stage/lib/libboost_atomic.a"
+    UPDATE_COMMAND "" # Skip annoying updates for every build
+    INSTALL_COMMAND ""
+)
+SET(BOOST_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/boost_1_64_0")
+SET(BOOST_LIBRARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/boost_1_64_0/stage/lib")
+SET(Boost_SYSTEM_LIBRARY "${BOOST_LIBRARY_DIR}/libboost_system-mt-s.a")
+SET(Boost_COROUTINE_LIBRARY "${BOOST_LIBRARY_DIR}/libboost_coroutine-mt-s.a")
+SET(Boost_LOG_LIBRARY "${BOOST_LIBRARY_DIR}/libboost_log-mt-s.a")
+SET(Boost_LOG_SETUP_LIBRARY "${BOOST_LIBRARY_DIR}/libboost_log_setup-mt-s.a")
+SET(Boost_IOSTREAMS_LIBRARY "${BOOST_LIBRARY_DIR}/libboost_iostreams-mt-s.a")
+INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
+
+## Boost hana (not yet available in 1.58) (header only library)
+ExternalProject_Add(hana
+    PREFIX 3rd_party
+    GIT_REPOSITORY https://github.com/boostorg/hana.git
+    GIT_TAG v1.2.0
+    GIT_SHALLOW 1
+    TLS_VERIFY true
+    TLS_CAINFO certs/DigiCertHighAssuranceEVRootCA.crt
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    UPDATE_COMMAND "" # Skip annoying updates for every build
+    INSTALL_COMMAND ""
+)
+SET(HANA_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/hana/include)
+INCLUDE_DIRECTORIES(${HANA_INCLUDE_DIR})
 
 ## Bandit (for tests)
 ExternalProject_Add(bandit
@@ -48,6 +88,3 @@ ExternalProject_Add(jsonpp11
      INSTALL_COMMAND ""
  )
 SET(JSONPP11_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/jsonpp11/src)
-
-## clang libc++
-FIND_LIBRARY(CPP c++)
