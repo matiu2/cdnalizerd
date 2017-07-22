@@ -9,7 +9,7 @@ find_package(Threads)
 ## not compatible with the gcc standard library. If we link them together we
 ## get segfaults and other horrors
 
-FIND_PACKAGE(Boost 1.58 REQUIRED system log log_setup coroutine filesystem)
+FIND_PACKAGE(Boost 1.64 REQUIRED system log log_setup coroutine filesystem)
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
 
 ## Boost hana (not yet available in 1.58) (header only library)
