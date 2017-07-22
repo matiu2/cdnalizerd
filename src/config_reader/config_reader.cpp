@@ -71,7 +71,7 @@ struct ConfigReader {
   Config config;
 
   void readFile(const std::string& filename) {
-     ptree pt;
+    ptree pt;
     // We can read any kind of config file from here:
     // http://www.boost.org/doc/libs/1_61_0/doc/html/property_tree/parsers.html
     if (boost::iends_with(filename, ".ini"))
@@ -95,7 +95,6 @@ struct ConfigReader {
   }
 
   Config &&getConfig() {
-    config.use(); // Sort the entries
     return std::move(config);
   }
 };

@@ -45,7 +45,7 @@ struct ConfigEntry {
            (*apikey < *other.apikey) || (snet < other.snet) ||
            (move < other.move);
   }
-  bool operator<(const std::string &path) const { return local_dir < path; }
+  bool operator==(const std::string &path) const { return local_dir == path; }
   bool operator==(const ConfigEntry &other) const {
     return (local_dir == other.local_dir) &&
            (remote_dir == other.remote_dir) &&
@@ -54,6 +54,20 @@ struct ConfigEntry {
            (snet == other.snet) && (move == other.move);
   }
 };
+
+inline bool operator<(const ConfigEntry &entry, const std::string &path) {
+  return entry.local_dir < path;
+}
+
+inline bool operator<(const std::string &path, const ConfigEntry &entry) {
+  return path < entry.local_dir;
+}
+
+inline bool operator==(const std::string &path, const ConfigEntry &entry) {
+  return path == entry.local_dir;
+}
+
+  
 
 #ifndef NDEBUG
 /// For debugging, make sure that we never use the list of Entries unsorted.
@@ -92,20 +106,7 @@ public:
   void setMove(bool new_val) {
     lastEntry.move = new_val;
   } 
-  void addEntry(std::string local_dir, std::string remote_dir) {
-    // Validate what we have
-    if ((!lastEntry.username) || (lastEntry.username->empty()) ||
-        (!lastEntry.apikey) || (lastEntry.apikey->empty()) ||
-        (!lastEntry.region) || (lastEntry.region->empty()) ||
-        (!lastEntry.container) || (lastEntry.container->empty()))
-      throw ConfigError("Need to have a valid username, apikey, region "
-                        "and container before adding a path pair");
-        // Now create it
-    ConfigEntry result(lastEntry);
-    result.local_dir = std::move(local_dir);
-    result.remote_dir = std::move(remote_dir);
-    _entries.emplace_back(std::move(result));
-  }
+  void addEntry(std::string local_dir, std::string remote_dir);
 
   Config() = default;
 
@@ -120,30 +121,7 @@ public:
     return *this;
   }
 
-  /// Makes the config ready for use
-  const Config &use() {
-    std::sort(_entries.begin(), _entries.end());
-#ifndef NDEBUG
-    _entries.is_sorted = true;
-#endif
-    return *this;
-  }
-
-  ConfigEntry getEntryByPath(const std::string &path) const {
-#ifndef NDEBUG
-    assert(_entries.is_sorted);
-#endif
-    auto found = std::lower_bound(_entries.cbegin(), _entries.cend(), path);
-    if (found != _entries.cend())
-      return *found;
-    else {
-      std::stringstream msg;
-      msg << "Couldn't find " << path << " in this list: ";
-      for (auto &e : _entries)
-        msg << e.local_dir << ", ";
-      throw std::logic_error(msg.str());
-    }
-  }
+  ConfigEntry getEntryByPath(const std::string &path) const;
   const Entries &entries() const { return _entries; }
   /// Returns true if we have a config
   operator bool() const { return _entries.size() > 0; }

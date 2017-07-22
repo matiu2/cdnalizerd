@@ -16,7 +16,7 @@ go_bandit([]() {
   using snowhouse::Contains;
 
   describe("config_reader", [&]() {
-    it("2. Can read an ini file", [&] {
+    it("1. Can read an ini file", [&] {
       std::ofstream config("tmp.ini");
       config << "username=james_bond\n";
       config << "apikey=key key key\n";
@@ -39,7 +39,7 @@ go_bandit([]() {
       AssertThat(entry.snet, Equals(false));
     });
 
-    it("8. Knows about service_net and can read a .info file ", [&]() {
+    it("2. Knows about service_net and can read a .info file ", [&]() {
       std::ofstream config("tmp.info");
       config << "username hello\n"
              << "apikey 1234\n"
@@ -57,6 +57,47 @@ go_bandit([]() {
       AssertThat(e.local_dir, Equals("/source/path"));
       AssertThat(e.remote_dir, Equals("/destination/path"));
       AssertThat(e.snet, Equals(false));
+    });
+
+    it("3. Can read a directory", [&]() {
+      namespace fs = boost::filesystem;
+      fs::path dir("tmp");
+      if (!fs::exists(dir))
+        fs::create_directory(dir);
+      std::ofstream config("tmp/tmp.ini");
+      config << "username=james_bond\n";
+      config << "apikey=key key key\n";
+      config << "container=    the.box    \n";
+      config << "region=ORD\n";
+      config << "endpoint = main\n";
+      config << "local_dir = /images\n";
+      config << "remote_dir = /remote_images\n";
+      config.close();
+      std::ofstream config2("tmp/tmp.info");
+      config2 << "username world\n"
+             << "apikey 5678\n"
+             << "container movies\n"
+             << "region DFW\n"
+             << "local_dir /amazing/videos\n"
+             << "remote_dir /destination/videos\n";
+      config2.close();
+      Config c = read_config(dir.string());
+      AssertThat(c.entries().size(), Equals(2u));
+      const ConfigEntry &e = c.getEntryByPath("/images");
+      AssertThat(*e.username, Equals("james_bond"));
+      AssertThat(*e.apikey, Equals("key key key"));
+      AssertThat(*e.container, Equals("the.box"));
+      AssertThat(*e.region, Equals("ORD"));
+      AssertThat(e.local_dir, Equals("/images"));
+      AssertThat(e.remote_dir, Equals("/remote_images"));
+      AssertThat(e.snet, Equals(false));
+      const ConfigEntry e2 = c.getEntryByPath("/amazing/videos");
+      AssertThat(*e2.username, Equals("world"));
+      AssertThat(*e2.apikey, Equals("5678"));
+      AssertThat(*e2.container, Equals("movies"));
+      AssertThat(*e2.region, Equals("DFW"));
+      AssertThat(e2.local_dir, Equals("/amazing/videos"));
+      AssertThat(e2.remote_dir, Equals("/destination/videos"));
     });
   });
 });
