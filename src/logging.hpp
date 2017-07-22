@@ -8,8 +8,4 @@ namespace cdnalizerd {
 
 namespace logging = boost::log;
 
-void initLogging() {
-  //logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::info);
-}
-
 } /* cdnalizerd */ 

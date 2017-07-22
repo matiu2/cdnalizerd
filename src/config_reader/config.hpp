@@ -125,5 +125,6 @@ public:
   const Entries &entries() const { return _entries; }
   /// Returns true if we have a config
   operator bool() const { return _entries.size() > 0; }
+  void write(const std::string& filename);
 };
 }
