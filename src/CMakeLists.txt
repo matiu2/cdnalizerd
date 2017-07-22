@@ -4,7 +4,6 @@ add_subdirectory(config_reader)
 
 add_executable(test_login test_login.cpp )
 add_dependencies(test_login jsonpp11)
-add_dependencies(test_login boost)
 add_dependencies(test_login bandit)
 add_dependencies(test_login RESTClient2)
 target_link_libraries(test_login ${RESTClient} ${Boost_SYSTEM_LIBRARY})
