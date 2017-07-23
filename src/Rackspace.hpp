@@ -1,6 +1,8 @@
 /// Logs in to rackspace and gives you a token
 #pragma once
 
+#include "logging.hpp"
+
 #include <jsonpp11/json_class.hpp>
 #include <jsonpp11/parse_to_json_class.hpp>
 #include <RESTClient/rest.hpp>
@@ -38,7 +40,8 @@ private:
   json::JSON response;
   Status _status;
   /// Maps cloud files region to URLs
-  std::map<std::string, std::string> cloudFilesURLs;
+  std::map<std::string, std::string> cloudFilesPublicURLs;
+  std::map<std::string, std::string> cloudFilesPrivateURLs;
 public:
   Rackspace() : _status(Fresh) {}
   /// Makes a new API for use by login
@@ -89,10 +92,10 @@ public:
     for (JMap& entry : catalog) {
       if (entry["name"] == "cloudFiles") {
         JList& endpoints(entry["endpoints"]);
-        // There will only be one endpoint in the list
-        assert(endpoints.size() == 1);
-        JMap& endpoint(endpoints[0]);
-        cloudFilesURLs[endpoint["region"]] = endpoint["publicURL"];
+        for (const JMap& ep : endpoints) {
+          cloudFilesPublicURLs[ep.at("region")] = ep.at("publicURL");
+          cloudFilesPrivateURLs[ep.at("region")] = ep.at("internalURL");
+        }
       }
     }
   }
@@ -100,9 +103,12 @@ public:
   const std::string& token() const { return _token; }
   Status status() const { return _status; }
   /// Returns the cloud files url for your region
-  const std::string& getURL(const std::string& region) {
+  const std::string& getURL(const std::string& region, bool snet) {
     assert(status() == Ready);
-    return cloudFilesURLs[region];
+    if (snet)
+      return cloudFilesPublicURLs[region];
+    else
+      return cloudFilesPrivateURLs[region];
   }
 
 };

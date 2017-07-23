@@ -5,6 +5,7 @@
 #include <sys/inotify.h>
 #include <unistd.h>
 #include <system_error>
+#include <ios>
 
 #include <boost/asio/buffers_iterator.hpp>
 #include <boost/asio/io_service.hpp>
@@ -12,6 +13,7 @@
 #include <boost/asio/read.hpp>
 #include <boost/asio/streambuf.hpp>
 #include <boost/optional.hpp>
+#include <boost/filesystem.hpp>
 
 #include <RESTClient/tcpip/interface.hpp>
 
@@ -21,6 +23,8 @@
 namespace cdnalizerd {
   
 namespace inotify {
+
+namespace fs = boost::filesystem;
 
 /// A watch on a single directory
 class Watch {
@@ -79,7 +83,6 @@ public:
 struct Event {
   using GetWatch = std::function<const Watch &(void)>;
   GetWatch watch; // Is filled in in waitForEvent
-  int watch_handle;
   uint32_t mask;   /* Mask of events */
   uint32_t cookie; /* Unique cookie associating related
                       events (for rename(2)) */
@@ -87,16 +90,16 @@ struct Event {
   // If it's a move or copy operation, 'destination' is the destination event
   std::unique_ptr<Event> destination;
 
-  Event(GetWatch watch, int watch_handle, uint32_t mask, uint32_t cookie,
+  Event(GetWatch watch, uint32_t mask, uint32_t cookie,
         const char *namePtr, int nameLen)
-      : watch(watch), watch_handle(watch_handle), mask(mask), cookie(cookie) {
+      : watch(watch), mask(mask), cookie(cookie) {
     name.reserve(nameLen);
     std::copy(namePtr, &namePtr[nameLen], std::back_inserter(name));
   }
 
   std::string path() const {
-    auto out = watch().path;
-    return cdnalizerd::joinPaths(out, name);
+    fs::path out = watch().path;
+    return (out / name).native();
   }
 
   /* Events we can watch for */
@@ -137,7 +140,51 @@ struct Event {
   bool addToTheMask() const { return mask & IN_MASK_ADD; }
   bool isDir() const { return mask & IN_ISDIR; }
   bool oneShot() const { return mask & IN_ONESHOT; }
+
 };
+
+/// Print the event info
+std::ostream &operator<<(std::ostream &out, const Event &e) {
+  using namespace std;
+  cout << "Event: path(" << e.path() << ") ";
+  if (e.wasAccessed())
+    cout << " Accessed ";
+  if (e.wasModified())
+    cout << " Modified ";
+  if (e.wasChanged())
+    cout << " Changed ";
+  if (e.wasSaved())
+    cout << " Saved ";
+  if (e.wasClosedWithoutSave())
+    cout << " ClosedWithoutSave ";
+  if (e.wasOpened())
+    cout << " Opened ";
+  if (e.wasMovedFrom())
+    cout << " MovedFrom ";
+  if (e.wasMovedTo())
+    cout << " MovedTo ";
+  if (e.wasCreated())
+    cout << " Created ";
+  if (e.wasDeleted())
+    cout << " Deleted ";
+  if (e.wasSelfDeleted())
+    cout << " SelfDeleted ";
+  if (e.wasSelfMoved())
+    cout << " SelfMoved ";
+  if (e.onlyIfDir())
+    cout << " onlyIfDir ";
+  if (e.dontFollow())
+    cout << " dontFollow ";
+  if (e.excludeEventsOnUnlinkedObjects())
+    cout << " excludeEventsOnUnlinkedObjects ";
+  if (e.addToTheMask())
+    cout << " addToTheMask ";
+  if (e.isDir())
+    cout << " isDir ";
+  if (e.oneShot())
+    cout << " oneShot ";
+  return out;
+}
 
 namespace asio = boost::asio;
 
@@ -149,7 +196,7 @@ union RawEvent {
 /// A collection of Watches
 struct Instance {
   yield_context &yield;
-  int handle;
+  int inotify_handle;
   std::shared_ptr<RESTClient::tcpip::io_service> io;
   asio::posix::stream_descriptor stream;
   boost::asio::mutable_buffers_1 buffer;
@@ -163,25 +210,31 @@ struct Instance {
   RawEvent data;
 
   Instance(yield_context &yield)
-      : yield(yield), handle(inotify_init1(IN_NONBLOCK)),
+      : yield(yield), inotify_handle(inotify_init1(IN_NONBLOCK)),
         io(RESTClient::tcpip::getService()), stream(*io),
         buffer(asio::buffer(data.raw)) {
-    if (handle == -1)
+    if (inotify_handle == -1)
       throw std::system_error(errno, std::system_category());
-    stream.assign(handle);
+    stream.assign(inotify_handle);
   }
-  const Watch &watchFromHandle(int handle) { return watches.at(handle); }
+  const Watch &watchFromHandle(int handle) const { return watches.at(handle); }
   Watch &addWatch(const char *path, uint32_t mask) {
+    BOOST_LOG_TRIVIAL(debug) << "Watching path: " << path << " mask("
+                             << std::hex << mask << ") inotify handle("
+                             << inotify_handle << ")";
     auto found = paths.find(path);
     if (found != paths.end())
       throw std::logic_error("Can't watch the same path twice");
-    auto watch = Watch(handle, path, mask);
+    auto watch = Watch(inotify_handle, path, mask);
+    BOOST_LOG_TRIVIAL(debug) << "watch handle for path (" << path
+                             << ") = " << watch.handle();
     paths.insert({watch.path, watch.handle()});
     auto result =
         watches.emplace(std::make_pair(watch.handle(), std::move(watch)));
     return result.first->second;
   }
   void removeWatch(Watch &watch) {
+    BOOST_LOG_TRIVIAL(debug) << "Removing watch: " << watch.path;
     auto found = watches.find(watch.handle());
     if (found != watches.end()) {
       paths.erase(found->second.path);
@@ -211,10 +264,12 @@ struct Instance {
         boost::asio::transfer_at_least(sizeof(inotify_event)), yield);
     if (len == -1)
       throw std::system_error(errno, std::system_category());
-    return Event([this]() -> const Watch & { return watches.at(handle); },
-                 handle, data.event.mask, data.event.cookie, data.event.name,
+    return Event([ this, wd = data.event.wd ]()->const Watch & {
+      return watches.at(wd);
+    },
+                 data.event.mask, data.event.cookie, data.event.name,
                  data.event.len);
   }
 };
 }
-} /* cdnalizerd  */ 
+} /* cdnalizerd  */

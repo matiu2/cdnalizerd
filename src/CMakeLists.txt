@@ -6,7 +6,7 @@ add_executable(test_login test_login.cpp )
 add_dependencies(test_login jsonpp11)
 add_dependencies(test_login bandit)
 add_dependencies(test_login RESTClient2)
-target_link_libraries(test_login ${RESTClient} ${Boost_SYSTEM_LIBRARY})
+target_link_libraries(test_login ${RESTClient} ${Boost_SYSTEM_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${Boost_LOG_LIBRARY})
 set_property(
   TARGET test_login
   APPEND

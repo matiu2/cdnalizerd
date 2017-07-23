@@ -9,6 +9,7 @@
 
 #include "../globals.hpp"
 
+#include <boost/system/system_error.hpp>
 #include <boost/log/trivial.hpp>
 
 namespace cdnalizerd {
@@ -57,14 +58,21 @@ void watchForFileChanges(yield_context yield) {
     RESTClient::http::spawn([&](yield_context y) {
       fillAccountCache(y, config, accounts, [&loginWorkers, &waitForLogins]() {
         --loginWorkers;
-        if (loginWorkers == 0)
-          waitForLogins.cancel();
+        if (loginWorkers == 0) {
+          boost::system::error_code ec;
+          waitForLogins.cancel(ec);
+        }
       });
     });
   }
 
   // Wait for all the logins to finish
-  waitForLogins.async_wait(yield);
+  try {
+    waitForLogins.async_wait(yield);
+  } catch(boost::system::system_error& e) {
+    if (e.code() != boost::asio::error::operation_aborted)
+      throw e;
+  }
 
   // Logins to Rackspace timed out
   assert(loginWorkers == 0);
@@ -78,6 +86,8 @@ void watchForFileChanges(yield_context yield) {
 
   while (true) {
     inotify::Event event = inotify.waitForEvent();
+    BOOST_LOG_TRIVIAL(debug) << "Got an inotify event: " << event;
+
     // If it's a move event, find its pair
     if (event.cookie) {
       auto found = cookies.find(event.cookie);
@@ -111,8 +121,8 @@ void watchForFileChanges(yield_context yield) {
       Rackspace &rs = accounts[entry.username];
       Job job{entry.move ? Move : Upload,
               joinPaths(entry.local_dir, event.path(),
-                        joinPaths(rs.getURL(*entry.region), *entry.container,
-                                  entry.remote_dir,
+                        joinPaths(rs.getURL(*entry.region, entry.snet),
+                                  *entry.container, entry.remote_dir,
                                   unJoinPaths(entry.local_dir, event.path())))};
       // If this event is a move and has a destionation..
       if (event.wasMovedFrom()) {
@@ -122,9 +132,9 @@ void watchForFileChanges(yield_context yield) {
               watchToConfig[event.destination->watch().handle()];
           // The original job should be a server side copy
           job.operation = SCopy;
-          job.dest = joinPaths(rs.getURL(*dest.region), *dest.container,
-                                dest.remote_dir,
-                                unJoinPaths(dest.local_dir, event.path()));
+          job.dest = joinPaths(rs.getURL(*dest.region, dest.snet),
+                               *dest.container, dest.remote_dir,
+                               unJoinPaths(dest.local_dir, event.path()));
           // The follow up job is the server side delete
           job.next.reset(new Job{SDelete, job.source});
         } else {
