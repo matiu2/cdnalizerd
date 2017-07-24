@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../config_reader/config.hpp"
-#include "../Status.hpp"
+#include "../Worker.hpp"
 
 namespace cdnalizerd {
 namespace processes {
