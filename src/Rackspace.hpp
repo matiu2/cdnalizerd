@@ -98,6 +98,7 @@ public:
         }
       }
     }
+    _status = Ready;
   }
   const json::JSON& loginJSON() const { return response; }
   const std::string& token() const { return _token; }

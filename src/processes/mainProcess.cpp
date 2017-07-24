@@ -4,16 +4,16 @@
 #include "../logging.hpp"
 
 #include "uploader.hpp"
-#include "../AccountCache.hpp"
+#include "login.hpp"
 #include "../WorkerManager.hpp"
 
-#include "../globals.hpp"
-
-#include <boost/system/system_error.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/filesystem.hpp>
 
 namespace cdnalizerd {
 namespace processes {
+
+namespace fs = boost::filesystem;
 
 constexpr int maskToFollow =
     IN_CREATE | IN_CLOSE_WRITE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO;
@@ -25,7 +25,7 @@ using Cookies = std::map<uint32_t, inotify::Event>;
 using WatchToConfig = std::map<uint32_t, ConfigEntry>; 
 
 /// Reads our configuration object and creates all the inotify watches needed
-void createINotifyWatches(inotify::Instance &inotify, WatchToConfig& watchToConfig) {
+void createINotifyWatches(inotify::Instance &inotify, WatchToConfig& watchToConfig, const Config& config) {
   for (const ConfigEntry &entry : config.entries()) {
     // Starts watching a directory
     inotify::Watch &watch =
@@ -38,44 +38,21 @@ void createINotifyWatches(inotify::Instance &inotify, WatchToConfig& watchToConf
   }
 }
 
-void watchForFileChanges(yield_context yield) {
+void watchForFileChanges(yield_context yield, const Config& config) {
   BOOST_LOG_TRIVIAL(info) << "Creating inotify watches...";
   // Setup
   inotify::Instance inotify(yield);
   // Maps inotify watch handles to config entries
   std::map<uint32_t, ConfigEntry> watchToConfig;
-  createINotifyWatches(inotify, watchToConfig);
+  createINotifyWatches(inotify, watchToConfig, config);
 
   // Account login information
   AccountCache accounts;
+  login(yield, accounts, config);
 
-  // Spawn some workers to fill in the account info (token and urls)
-  BOOST_LOG_TRIVIAL(info) << "Getting API Authentication tokens...";
-  boost::asio::deadline_timer waitForLogins(*RESTClient::tcpip::getService(),
-                                            boost::posix_time::minutes(10));
-  int loginWorkers = 2;
-  for (int i = 0; i != loginWorkers; ++i) {
-    RESTClient::http::spawn([&](yield_context y) {
-      fillAccountCache(y, config, accounts, [&loginWorkers, &waitForLogins]() {
-        --loginWorkers;
-        if (loginWorkers == 0) {
-          boost::system::error_code ec;
-          waitForLogins.cancel(ec);
-        }
-      });
-    });
-  }
-
-  // Wait for all the logins to finish
-  try {
-    waitForLogins.async_wait(yield);
-  } catch(boost::system::system_error& e) {
-    if (e.code() != boost::asio::error::operation_aborted)
-      throw e;
-  }
-
-  // Logins to Rackspace timed out
-  assert(loginWorkers == 0);
+  // TODO: Sync the whole directory
+  
+  
 
   std::list<Job> jobsToDo;
 
@@ -112,45 +89,46 @@ void watchForFileChanges(yield_context yield) {
     // Now we have a whole event...
     if (event.wasCreated()) {
       // ... if a directory was created, add a watch to it
-      std::string path = event.path();
-      if (isDir(path.c_str()))
+      fs::path path = event.path();
+      if (fs::is_directory(path)) {
         inotify.addWatch(path.c_str(), maskToFollow);
-    } else {
-      // Create the job
-      const ConfigEntry &entry = watchToConfig[event.watch().handle()];
-      Rackspace &rs = accounts[entry.username];
-      Job job{entry.move ? Move : Upload,
-              joinPaths(entry.local_dir, event.path(),
-                        joinPaths(rs.getURL(*entry.region, entry.snet),
-                                  *entry.container, entry.remote_dir,
-                                  unJoinPaths(entry.local_dir, event.path())))};
-      // If this event is a move and has a destionation..
-      if (event.wasMovedFrom()) {
-        if (event.destination) {
-          // This may be a server side rename (copy + delete)
-          const ConfigEntry &dest =
-              watchToConfig[event.destination->watch().handle()];
-          // The original job should be a server side copy
-          job.operation = SCopy;
-          job.dest = joinPaths(rs.getURL(*dest.region, dest.snet),
-                               *dest.container, dest.remote_dir,
-                               unJoinPaths(dest.local_dir, event.path()));
-          // The follow up job is the server side delete
-          job.next.reset(new Job{SDelete, job.source});
-        } else {
-          // This file was moved out of our known directory space, delete it
-          // from the server
-          job.operation = SDelete;
-          job.dest.clear();
-        }
-        // Put it in the right queue
-        auto worker = workers.getWorker(job.workerURL(), rs);
-        worker->addJob(std::move(job));
-      } else if (event.wasDeleted()) {
+        continue;
+      }
+    }
+    // Create the job
+    const ConfigEntry &entry = watchToConfig[event.watch().handle()];
+    Rackspace &rs = accounts[entry.username];
+    Job job{entry.move ? Move : Upload,
+            joinPaths(entry.local_dir, event.path(),
+                      joinPaths(rs.getURL(*entry.region, entry.snet),
+                                *entry.container, entry.remote_dir,
+                                unJoinPaths(entry.local_dir, event.path())))};
+    // If this event is a move and has a destionation..
+    if (event.wasMovedFrom()) {
+      if (event.destination) {
+        // This may be a server side rename (copy + delete)
+        const ConfigEntry &dest =
+            watchToConfig[event.destination->watch().handle()];
+        // The original job should be a server side copy
+        job.operation = SCopy;
+        job.dest = joinPaths(rs.getURL(*dest.region, dest.snet),
+                             *dest.container, dest.remote_dir,
+                             unJoinPaths(dest.local_dir, event.path()));
+        // The follow up job is the server side delete
+        job.next.reset(new Job{SDelete, job.source});
+      } else {
+        // This file was moved out of our known directory space, delete it
+        // from the server
         job.operation = SDelete;
-        job.source.swap(job.dest);
         job.dest.clear();
       }
+      // Put it in the right queue
+      auto worker = workers.getWorker(job.workerURL(), rs);
+      worker->addJob(std::move(job));
+    } else if (event.wasDeleted()) {
+      job.operation = SDelete;
+      job.source.swap(job.dest);
+      job.dest.clear();
     }
   }
 }
