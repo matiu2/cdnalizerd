@@ -107,9 +107,9 @@ public:
   const std::string& getURL(const std::string& region, bool snet) {
     assert(status() == Ready);
     if (snet)
-      return cloudFilesPublicURLs[region];
-    else
       return cloudFilesPrivateURLs[region];
+    else
+      return cloudFilesPublicURLs[region];
   }
 
 };

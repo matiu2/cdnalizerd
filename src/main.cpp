@@ -7,6 +7,7 @@
 #include "config_reader/config_reader.hpp"
 #include "config_reader/config_writer.hpp"
 #include "processes/mainProcess.hpp"
+#include "processes/list.hpp"
 #include "logging.hpp"
 
 #include <boost/program_options.hpp>
@@ -26,7 +27,8 @@ int main(int argc, char **argv) {
       ".info or .ini")("create-sample",
                        "Creates an empty sample config file at 'config' "
                        "filename, and does nothing else")("go",
-                                                          "Start running...");
+                                                          "Start running...")(
+      "list", "List all the containers from the config to standard out");
   po::variables_map options;
   po::store(po::parse_command_line(argc, argv, desc), options);
   options.notify();
@@ -35,17 +37,21 @@ int main(int argc, char **argv) {
   std::string config_file_name = options["config"].as<std::string>();
   if (options.count("create-sample")) {
     cdnalizerd::write_sample_config(config_file_name);
-    BOOST_LOG_TRIVIAL(info) << "Sample config file written to " << config_file_name;
+    BOOST_LOG_TRIVIAL(info) << "Sample config file written to "
+                            << config_file_name;
     return 0;
-  } 
-
-
-  if (options.count("go")) {
+  }
+  if (options.count("list") || options.count("go")) {
     BOOST_LOG_TRIVIAL(info) << "Reading config from " << config_file_name;
     Config config = read_config(config_file_name);
-    RESTClient::http::spawn([&config](yield_context yield) {
-      cdnalizerd::processes::watchForFileChanges(std::move(yield), config);
-    });
+    if (options.count("list"))
+      RESTClient::http::spawn([&config](yield_context yield) {
+        cdnalizerd::processes::listContainers(std::move(yield), config);
+      });
+    else if (options.count("go"))
+      RESTClient::http::spawn([&config](yield_context yield) {
+        cdnalizerd::processes::watchForFileChanges(std::move(yield), config);
+      });
     RESTClient::http::run();
     return 0;
   } else {

@@ -17,6 +17,7 @@ struct CompareSharedPtr {
   }
 };
 
+/// maps config.username to a Rackspace object
 using AccountCache = std::map<sstring, Rackspace, CompareSharedPtr>;
 
 /// Worker that fills an account cache by logging on to all the RS accounts and
