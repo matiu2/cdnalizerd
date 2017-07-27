@@ -73,7 +73,6 @@ void JSONDoListContainer(JSONListContainerOut &out, yield_context &yield,
                          const ConfigEntry &entry) {
   genericDoListContainer(
       [&out](const std::string &body, std::string& marker) {
-        BOOST_LOG_TRIVIAL(debug) << "About to parse json: \n" << body;
         json::JList entries = json::readValue(body);
         size_t count = entries.size();
         const json::JMap& last = entries.back();

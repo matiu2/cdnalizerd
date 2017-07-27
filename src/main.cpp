@@ -29,7 +29,9 @@ int main(int argc, char **argv) {
                        "filename, and does nothing else")("go",
                                                           "Start running...")(
       "list", "List all the containers from the config to standard out")(
-      "list-json", "List all the containers from the config to standard out in json format");
+      "list-detailed", "List all the containers from the config to standard "
+                       "out, including md5sum, modification date (in UTC), "
+                       "content-type, size");
   po::variables_map options;
   po::store(po::parse_command_line(argc, argv, desc), options);
   options.notify();
@@ -42,7 +44,7 @@ int main(int argc, char **argv) {
                             << config_file_name;
     return 0;
   }
-  if (options.count("list") || options.count("list-json") ||
+  if (options.count("list") || options.count("list-detailed") ||
       options.count("go")) {
     BOOST_LOG_TRIVIAL(info) << "Reading config from " << config_file_name;
     Config config = read_config(config_file_name);
@@ -50,7 +52,7 @@ int main(int argc, char **argv) {
       RESTClient::http::spawn([&config](yield_context yield) {
         cdnalizerd::processes::listContainers(std::move(yield), config);
       });
-    else if (options.count("list-json"))
+    else if (options.count("list-detailed"))
       RESTClient::http::spawn([&config](yield_context yield) {
         cdnalizerd::processes::JSONListContainers(std::move(yield), config);
       });
