@@ -40,7 +40,7 @@ private:
 
 public:
   // Consstructor
-  Worker(Rackspace& rs) : rs(rs), _state(Raw) {}
+  Worker(Rackspace &rs, URL url) : rs(rs), _state(Raw), url(std::move(url))  {}
   void launch(std::function<void()> onDone);
   WorkerState state() const { return _state; }
   bool idle() const { return (_state == Ready) || (_state == Idle); }
@@ -64,6 +64,7 @@ public:
     _state = newState;
     return StateSentry(_state);
   }
+  const URL url;
 };
 
 

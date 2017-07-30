@@ -57,6 +57,7 @@ void watchForFileChanges(yield_context yield, const Config& config) {
   
   
 
+  /*
   std::list<Job> jobsToDo;
 
   /// Holds file move operations that are waiting for a pair
@@ -97,6 +98,7 @@ void watchForFileChanges(yield_context yield, const Config& config) {
         inotify.addWatch(path.c_str(), maskToFollow);
         continue;
       }
+      // TODO: Sometimes files are created with > zero bytes
     }
     // Create the job parts
     const ConfigEntry &entry = watchToConfig[event.watch().handle()];
@@ -133,6 +135,7 @@ void watchForFileChanges(yield_context yield, const Config& config) {
       job.dest.clear();
     }
   }
+*/
 }
 
 } /* processes  */ 

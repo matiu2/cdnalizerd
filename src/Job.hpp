@@ -31,7 +31,7 @@ struct Job {
   Job(const Job& other) = delete;
 };
 
-std::ostream &operator<<(std::ostream &out, const Job& job) {
+inline std::ostream &operator<<(std::ostream &out, const Job& job) {
   out << "Job id(" << job.id << ") \"" << job.name << "\"";
   return out;
 }
