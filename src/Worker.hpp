@@ -1,6 +1,7 @@
 #pragma once
 
 #include <queue>
+#include <memory>
 #include <functional>
 
 #include "Rackspace.hpp"
@@ -53,7 +54,7 @@ public:
   }
   Job getNextJob() {
     assert(_queue.size() > 0);
-    auto result = std::move(_queue.front());
+    Job result = std::move(_queue.front());
     _queue.pop();
     return result;
   }

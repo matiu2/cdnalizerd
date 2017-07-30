@@ -10,10 +10,13 @@
 #include <boost/log/trivial.hpp>
 #include <boost/filesystem.hpp>
 
+#include <RESTClient/http/url.hpp>
+
 namespace cdnalizerd {
 namespace processes {
 
 namespace fs = boost::filesystem;
+using RESTClient::http::URL;
 
 constexpr int maskToFollow =
     IN_CREATE | IN_CLOSE_WRITE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO;
@@ -95,14 +98,15 @@ void watchForFileChanges(yield_context yield, const Config& config) {
         continue;
       }
     }
-    // Create the job
+    // Create the job parts
     const ConfigEntry &entry = watchToConfig[event.watch().handle()];
     Rackspace &rs = accounts[entry.username];
-    Job job{entry.move ? Move : Upload,
-            joinPaths(entry.local_dir, event.path(),
-                      joinPaths(rs.getURL(*entry.region, entry.snet),
-                                *entry.container, entry.remote_dir,
-                                unJoinPaths(entry.local_dir, event.path())))};
+    fs::path localFile(joinPaths(entry.local_dir, event.path()));
+    URL remoteURL = URL(rs.getURL(*entry.region, entry.snet)) /
+                    *entry.container / entry.remote_dir /
+                    unJoinPaths(entry.local_dir, event.path());
+
+
     // If this event is a move and has a destionation..
     if (event.wasMovedFrom()) {
       if (event.destination) {
@@ -110,12 +114,10 @@ void watchForFileChanges(yield_context yield, const Config& config) {
         const ConfigEntry &dest =
             watchToConfig[event.destination->watch().handle()];
         // The original job should be a server side copy
-        job.operation = SCopy;
-        job.dest = joinPaths(rs.getURL(*dest.region, dest.snet),
-                             *dest.container, dest.remote_dir,
-                             unJoinPaths(dest.local_dir, event.path()));
-        // The follow up job is the server side delete
-        job.next.reset(new Job{SDelete, job.source});
+        worker->addJob(makeServerSideMoveJob(
+            remoteURL, rs.getURL(*dest.region, dest.snet) / *dest.container /
+                           dest.remote_dir /
+                           unJoinPaths(dest.local_dir, event.path())));
       } else {
         // This file was moved out of our known directory space, delete it
         // from the server

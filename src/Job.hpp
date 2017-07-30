@@ -1,38 +1,40 @@
 #pragma once
 
-#include <string>
-#include <memory>
+#include <functional>
+#include <ostream>
+
+#include <RESTClient/rest.hpp>
+#include <boost/filesystem.hpp>
+#include <RESTClient/http/url.hpp>
+
+#include "logging.hpp"
 
 namespace cdnalizerd {
 
-enum Operation {
-  Upload,  // Upload from local source to url dest
-  Move,    // Upload from local source to url dest, then delete local source
-  SCopy,    // Server side copy from url source to url dest
-  SDelete, // Server side Delete url source (ignore dest)
-};
+// These are here to give consistent naming for all users of the header
+namespace fs = boost::filesystem;
+using RESTClient::REST;
+using RESTClient::http::URL;
 
 struct Job {
-  Operation operation;
-  // source is usually the server side path
-  std::string source;
-  // dest is usually the local path, depnending on the operation
-  std::string dest;
-  // If set, it should be followed by the next job immediately. 
-  // eg. server side copy followed by server side delete.
-  // eg. upload to one account, then delete from the other account
-  std::shared_ptr<Job> next = {};
-  const std::string& workerURL() const {
-    switch (operation) {
-      case Upload:
-      case Move:
-        return dest;
-      case SCopy:
-      case SDelete:
-        return source;
-    };
+  using Worker = std::function<void(RESTClient::REST&)>;
+  static size_t nextId;
+  const size_t id;
+  const std::string name;
+  const Worker go;
+  Job(std::string name, Worker go)
+      : id(nextId++), name(std::move(name)), go(go) {
+    BOOST_LOG_TRIVIAL(debug) << "Job created: " << *this;
   }
+  Job(Job&& other) = default;
+   // Can't copy them because then you'd have two with the same ID
+  Job(const Job& other) = delete;
 };
 
-  
-} /* cdnalizerd  */ 
+std::ostream &operator<<(std::ostream &out, const Job& job) {
+  out << "Job id(" << job.id << ") \"" << job.name << "\"";
+  return out;
+}
+
+
+}
