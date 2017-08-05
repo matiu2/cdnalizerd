@@ -15,4 +15,4 @@ add_test(test_login test_login)
 
 add_executable(cdnalizerd main.cpp utils.cpp inotify.cpp AccountCache.cpp Job.cpp Worker.cpp processes/mainProcess.cpp processes/login.cpp processes/list.cpp processes/syncAllDirectories.cpp)
 add_dependencies(cdnalizerd RESTClient2)
-target_link_libraries(cdnalizerd config_reader ${CMAKE_THREAD_LIBS_INIT} ${RESTClient} ${Boost_COROUTINE_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_IOSTREAMS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY})
+target_link_libraries(cdnalizerd config_reader ${CMAKE_THREAD_LIBS_INIT} ${RESTClient} ${Boost_COROUTINE_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_IOSTREAMS_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_DATE_TIME_LIBRARY})

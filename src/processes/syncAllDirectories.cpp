@@ -9,6 +9,7 @@
 #include "../utils.hpp"
 
 #include <boost/filesystem.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <set>
 #include <iostream>
@@ -58,22 +59,33 @@ void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
       std::string localRelativePath(
           "/"s + fs::relative(*local_iterator, config.local_dir).string());
       int diff = localRelativePath.compare(remoteRelativePath);
-      if (diff == 0) {
-        // The local and remote files are the same one
-        // check the modification time
-        // TODO: Check the files' modification time in UTC against the
-        // remoteEntry.at("last_modified') and "bytes" (for the size)
-        // We need to get the next local file
-        ++local_iterator;
-        ++remote_iterator;
-      } else if (diff < 0) {
-        // The local file is less than the remote file
-        // The local file doesn't exist on the server and should be uploaded
+      auto upload = [&](){
         URL url(baseURL);
         auto worker = workers.getWorker(url, rs);
         worker->addJob(jobs::makeUploadJob(
             *local_iterator,
             url / *config.container / config.remote_dir / localRelativePath));
+      };
+      if (diff == 0) {
+        using namespace boost::posix_time;
+        // The local and remote files are the same one
+        // check the modification time
+        // Check the files' modification time in UTC against the
+        // remoteEntry.at("last_modified') and "bytes" (for the size)
+        ptime localTime(
+            from_time_t(fs::last_write_time(*local_iterator)));
+        std::string remote_raw(remote_iterator->at("last_modified"));
+        remote_raw[remote_raw.find('T')] = ' ';
+        ptime remoteTime(time_from_string(remote_raw));
+        if (localTime > remoteTime)
+          upload();
+        // Get the next pair of files
+        ++local_iterator;
+        ++remote_iterator;
+      } else if (diff < 0) {
+        // The local file is less than the remote file
+        // The local file doesn't exist on the server and should be uploaded
+        upload();
         // We need to get the next local file
         ++local_iterator;
       } else {
