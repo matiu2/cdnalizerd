@@ -3,8 +3,8 @@
 #include "../inotify.hpp"
 #include "../logging.hpp"
 
-#include "uploader.hpp"
 #include "login.hpp"
+#include "syncAllDirectories.hpp"
 #include "../WorkerManager.hpp"
 
 #include <boost/log/trivial.hpp>
@@ -53,17 +53,15 @@ void watchForFileChanges(yield_context yield, const Config& config) {
   AccountCache accounts;
   login(yield, accounts, config);
 
-  // TODO: Sync the whole directory
-  
-  
+  WorkerManager workers;
+
+  syncAllDirectories(yield, accounts, config, workers);
 
   /*
   std::list<Job> jobsToDo;
 
   /// Holds file move operations that are waiting for a pair
   std::map<uint32_t, inotify::Event> cookies;
-
-  WorkerManager workers;
 
   while (true) {
     inotify::Event event = inotify.waitForEvent();

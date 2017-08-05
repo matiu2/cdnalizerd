@@ -104,12 +104,12 @@ public:
   const std::string& token() const { return _token; }
   Status status() const { return _status; }
   /// Returns the cloud files url for your region
-  const std::string& getURL(const std::string& region, bool snet) {
+  const std::string &getURL(const std::string &region, bool snet) const {
     assert(status() == Ready);
     if (snet)
-      return cloudFilesPrivateURLs[region];
+      return cloudFilesPrivateURLs.at(region);
     else
-      return cloudFilesPublicURLs[region];
+      return cloudFilesPublicURLs.at(region);
   }
 
 };

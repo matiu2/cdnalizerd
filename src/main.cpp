@@ -8,6 +8,7 @@
 #include "config_reader/config_writer.hpp"
 #include "processes/mainProcess.hpp"
 #include "processes/list.hpp"
+#include "processes/login.hpp"
 #include "logging.hpp"
 
 #include <boost/program_options.hpp>
@@ -50,11 +51,15 @@ int main(int argc, char **argv) {
     Config config = read_config(config_file_name);
     if (options.count("list"))
       RESTClient::http::spawn([&config](yield_context yield) {
-        cdnalizerd::processes::listContainers(std::move(yield), config);
+        AccountCache accounts;
+        login(yield, accounts, config);
+        cdnalizerd::processes::listContainers(std::move(yield), accounts, config);
       });
     else if (options.count("list-detailed"))
       RESTClient::http::spawn([&config](yield_context yield) {
-        cdnalizerd::processes::JSONListContainers(std::move(yield), config);
+        AccountCache accounts;
+        login(yield, accounts, config);
+        cdnalizerd::processes::JSONListContainers(std::move(yield), accounts, config);
       });
     else if (options.count("go"))
       RESTClient::http::spawn([&config](yield_context yield) {

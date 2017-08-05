@@ -30,7 +30,7 @@ public:
 class Worker {
 private:
   // Info for making connections
-  Rackspace& rs;
+  const Rackspace& rs;
   WorkerState _state;
   // Mechanism to stop working when we have no new jobs
   std::function<void()> _onDone;
@@ -40,7 +40,10 @@ private:
 
 public:
   // Consstructor
-  Worker(Rackspace &rs, URL url) : rs(rs), _state(Raw), url(std::move(url))  {}
+  Worker(const Rackspace &rs, URL url)
+      : rs(rs), _state(Raw), url(std::move(url)) {}
+  Worker(const Worker&) = delete;
+  Worker(Worker&&) = default;
   void launch(std::function<void()> onDone);
   WorkerState state() const { return _state; }
   bool idle() const { return (_state == Ready) || (_state == Idle); }

@@ -28,36 +28,38 @@ using JSONListContainerOut = JSONListContainerCoroutine::push_type;
 
 /// Fills 'out' with the contents of a container. Returns true if we need to
 void doListContainer(ListContainerOut &out, yield_context &yield,
-                     const AccountCache &accounts, const ConfigEntry &entry);
+                     const Rackspace &rs, const ConfigEntry &entry);
 
 /// Fills 'out' with the contents of a container. Returns true if we need to
+/// if 'restrict' is true, it'll only list paths in the prefix entry.remote_dir
 void JSONDoListContainer(JSONListContainerOut &out, yield_context &yield,
-                         const AccountCache &accounts,
-                         const ConfigEntry &entry);
+                         const Rackspace &rs, const ConfigEntry &entry,
+                         bool restrict);
 
 namespace processes {
 
 inline ListContainerResult listContainer(yield_context &yield,
-                                         const AccountCache &accounts,
+                                         const Rackspace &rs,
                                          const ConfigEntry &entry) {
   return ListContainerResult([&](ListContainerOut &pusher) {
-    doListContainer(pusher, yield, accounts, entry);
+    doListContainer(pusher, yield, rs, entry);
   });
 }
 
 inline JSONListContainerResult JSONListContainer(yield_context &yield,
-                                                 const AccountCache &accounts,
-                                                 const ConfigEntry &entry) {
+                                                 const Rackspace &rs,
+                                                 const ConfigEntry &entry,
+                                                 bool restrict_to_remote_dir) {
   return JSONListContainerResult([&](JSONListContainerOut &pusher) {
-    JSONDoListContainer(pusher, yield, accounts, entry);
+    JSONDoListContainer(pusher, yield, rs, entry, restrict_to_remote_dir);
   });
 }
 
 /// Prints out the contents of all containers
-void listContainers(yield_context yield, const Config &config);
+void listContainers(yield_context yield, const AccountCache& accounts, const Config &config);
 
 /// Prints out the contents of all containers
-void JSONListContainers(yield_context yield, const Config &config);
+void JSONListContainers(yield_context yield, const AccountCache& accounts, const Config &config);
 
 
 } /* processes { */ 

@@ -16,7 +16,7 @@ private:
 public:
   /// Returns an iterator to the worker with the least load; creates a worker if
   /// necessary
-  std::list<Worker>::iterator getWorker(const std::string &url, Rackspace& rs) {
+  std::list<Worker>::iterator getWorker(const std::string &url, const Rackspace& rs) {
     std::list<Worker> &list(workers[url]);
     if (list.size() < MAX_WORKERS_PER_URL) {
       list.push_front(Worker(rs, url));

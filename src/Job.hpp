@@ -17,12 +17,12 @@ using RESTClient::REST;
 using RESTClient::http::URL;
 
 struct Job {
-  using Worker = std::function<void(RESTClient::REST&)>;
+  using Work = std::function<void(RESTClient::REST&)>;
   static size_t nextId;
   const size_t id;
   const std::string name;
-  const Worker go;
-  Job(std::string name, Worker go)
+  const Work go;
+  Job(std::string name, Work go)
       : id(nextId++), name(std::move(name)), go(go) {
     BOOST_LOG_TRIVIAL(debug) << "Job created: " << *this;
   }
