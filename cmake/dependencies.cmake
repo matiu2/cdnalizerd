@@ -1,15 +1,37 @@
 
 include(ExternalProject)
 
+# C++
+find_library(CPP c++)
+
+# Lib sup c++
+find_library(SUP_CPP supc++
+             HINTS /usr/lib/gcc/x86_64-linux-gnu/5)
+
+# dl
+find_library(DL dl)
+
+# z
+find_library(Z z)
+
+# c
+find_library(C c)
+
 ## Threads
 find_package(Threads)
+
+## OpenSSL
+find_package(OpenSSL REQUIRED)
+include_directories(${OPENSSL_INCLUDE_DIRS})
+link_directories(${OPENSSL_LIBRARIES})
+message(STATUS "Using OpenSSL ${OPENSSL_VERSION}")
 
 ## Boost
 ## We need to compile our own boost, because we need clang's libc++, which is
 ## not compatible with the gcc standard library. If we link them together we
 ## get segfaults and other horrors
 
-FIND_PACKAGE(Boost 1.64 REQUIRED system log log_setup coroutine filesystem program_options date_time)
+FIND_PACKAGE(Boost 1.64 REQUIRED system log log_setup coroutine context filesystem program_options date_time iostreams thread)
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
 
 ## Boost hana (not yet available in 1.58) (header only library)

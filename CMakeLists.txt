@@ -10,7 +10,8 @@ include_directories("/usr/include/libcxxabi")
 add_definitions(-DBOOST_COROUTINE_NO_DEPRECATION_WARNING)
 add_definitions(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING)
 #ADD_DEFINITIONS(-DBOOST_LOG_NO_THREADS)
-ADD_DEFINITIONS(-DBOOST_ALL_DYN_LINK)
+## This is needed if linking statically
+#ADD_DEFINITIONS(-DBOOST_ALL_DYN_LINK)
 
 # This is just for youcompleteme vim plugin
 set(CMAKE_EXPORT_COMPILE_COMMANDS "ON")
