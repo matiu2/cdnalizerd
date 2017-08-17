@@ -5,8 +5,8 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
 #include <cassert>
-#include <string>
 #include <iostream>
+#include <string>
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
@@ -70,20 +70,26 @@ struct ConfigReader {
 
   Config config;
 
-  void readFile(const std::string& filename) {
-    ptree pt;
-    // We can read any kind of config file from here:
-    // http://www.boost.org/doc/libs/1_61_0/doc/html/property_tree/parsers.html
-    if (boost::iends_with(filename, ".ini"))
-      boost::property_tree::ini_parser::read_ini(filename, pt);
-    else if (boost::iends_with(filename, ".json"))
-      boost::property_tree::json_parser::read_json(filename, pt);
-    else if (boost::iends_with(filename, ".xml"))
-      boost::property_tree::xml_parser::read_xml(filename, pt);
-    else if (boost::iends_with(filename, ".info"))
-      boost::property_tree::info_parser::read_info(filename, pt);
-    parseTree(pt);
- }
+  void readFile(const std::string &filename) {
+    try {
+      ptree pt;
+      // We can read any kind of config file from here:
+      // http://www.boost.org/doc/libs/1_61_0/doc/html/property_tree/parsers.html
+      if (boost::iends_with(filename, ".ini"))
+        boost::property_tree::ini_parser::read_ini(filename, pt);
+      else if (boost::iends_with(filename, ".json"))
+        boost::property_tree::json_parser::read_json(filename, pt);
+      else if (boost::iends_with(filename, ".xml"))
+        boost::property_tree::xml_parser::read_xml(filename, pt);
+      else if (boost::iends_with(filename, ".info"))
+        boost::property_tree::info_parser::read_info(filename, pt);
+      parseTree(pt);
+    } catch (...) {
+      std::clog << "ERROR: Unable to load config file: '" << filename << "': "
+                << boost::current_exception_diagnostic_information(true)
+                << std::endl;
+    }
+  }
 
   void parseTree(const ptree& pt) {
     config.addUsername(pt.get<std::string>("username"));
@@ -118,9 +124,11 @@ Config read_config(const std::string &dir_name) {
 
     Config result = reader.getConfig();
     return result;
-  } catch (fs::filesystem_error &e) {
-    std::cerr << "File system error: " << e.what() << std::endl;
-    throw std::runtime_error(e.what());
+  } catch (...) {
+    std::clog << "ERROR: Unable to load config directory: '"
+              << boost::current_exception_diagnostic_information(true)
+              << std::endl;
+    throw;
   }
 }
 }

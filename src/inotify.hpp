@@ -126,12 +126,15 @@ struct Event {
   bool wasIgnored() const { return mask & IN_IGNORED; }
 
   /* Helper events */
-  bool wasClose() const {
+  /// File was closed (could have been written or not)
+  bool wasClosed() const {
     return mask & IN_CLOSE;
-  } /// File was closed (could have been written or not)
+  }
+
+  /// File was moved, either from or to
   bool wasMoved() const {
     return mask & IN_MOVE;
-  } /// File was moved, either from or to
+  } 
 
   /* special flags */
   bool onlyIfDir() const { return mask & IN_ONLYDIR; }
@@ -178,22 +181,22 @@ struct Instance {
   }
   const Watch &watchFromHandle(int handle) const { return watches.at(handle); }
   Watch &addWatch(const char *path, uint32_t mask) {
-    BOOST_LOG_TRIVIAL(debug) << "Watching path: " << path << " mask("
-                             << std::hex << mask << ") inotify handle("
-                             << inotify_handle << ")";
+    std::clog << "DEBUG: Watching path: " << path << " mask(" << std::hex
+              << mask << ") inotify handle(" << inotify_handle << ")"
+              << std::endl;
     auto found = paths.find(path);
     if (found != paths.end())
       throw std::logic_error("Can't watch the same path twice");
     auto watch = Watch(inotify_handle, path, mask);
-    BOOST_LOG_TRIVIAL(debug) << "watch handle for path (" << path
-                             << ") = " << watch.handle();
+    std::clog << "DEBUG: watch handle for path (" << path
+              << ") = " << watch.handle() << std::endl;
     paths.insert({watch.path, watch.handle()});
     auto result =
         watches.emplace(std::make_pair(watch.handle(), std::move(watch)));
     return result.first->second;
   }
   void removeWatch(Watch &watch) {
-    BOOST_LOG_TRIVIAL(debug) << "Removing watch: " << watch.path;
+    std::clog << "DEBUG: Removing watch: " << watch.path << std::endl;
     auto found = watches.find(watch.handle());
     if (found != watches.end()) {
       paths.erase(found->second.path);

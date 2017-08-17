@@ -5,8 +5,7 @@
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/asio/deadline_timer.hpp>
-
-#include "logging.hpp"
+#include <boost/exception/exception.hpp>
 
 namespace cdnalizerd {
 
@@ -28,20 +27,31 @@ void doWork(Worker &worker, yield_context yield) {
   OnDoneSentry onDoneSentry(worker);
   auto stateSentry = worker.setState(Working);
   // Connect
+  std::clog << "INFO: Worker " << &worker << " connecting to "
+            << worker.url.host_part() << std::endl;
   REST conn(
       yield, worker.url.host_part(),
       {{"Content-type", "application/json"}, {"X-Auth-Token", worker.token()}});
   while (worker.hasMoreJobs()) {
     Job job = std::move(worker.getNextJob());
-    BOOST_LOG_TRIVIAL(info) << "Running job: " << job.id << " " << job.name;
+    std::clog << "INFO: Running job: " << job.id << " " << job.name << std::endl;
     try {
       job.go(conn);
-    } catch ( std::exception& e ) {
-      BOOST_LOG_TRIVIAL(error) << "Errored job: " << job.id << " " << job.name << ": " << e.what();
+      std::clog << "INFO: Finished job: " << job.id << " " << job.name << std::endl;
+    } catch (boost::exception &e) {
+      std::clog << "ERROR: Errored job (boost exception): " << job.id << " "
+                << job.name << boost::diagnostic_information(e, true)
+                << std::endl;
+    } catch (std::exception &e) {
+      std::clog << "ERROR: Errored job (std::exception): " << job.id << " "
+                << job.name << ": " << boost::diagnostic_information(e, true)
+                << std::endl;
     } catch (...) {
-      BOOST_LOG_TRIVIAL(error) << "Errored job: " << job.id << " " << job.name << ": UNKNOWN ERROR";
+      std::clog << "ERROR: Errored job (unkown exception): " << job.id << " "
+                << job.name
+                << boost::current_exception_diagnostic_information(true)
+                << std::endl;
     }
-    BOOST_LOG_TRIVIAL(info) << "Finished job: " << job.id << " " << job.name;
     if (!worker.hasMoreJobs()) {
       // If we have no more work to do, keep the connection open for some time
       stateSentry.updateState(Idle);

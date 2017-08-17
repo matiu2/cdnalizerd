@@ -9,7 +9,7 @@ add_executable(locale locale.cpp)
 add_executable(utf8 utf8.cpp)
 
 add_executable(inotify_own_wrapper inotify_own_wrapper.cpp)
-target_link_libraries(inotify_own_wrapper ${Boost_SYSTEM_LIBRARY} ${Boost_IOSTREAMS_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${Boost_COROUTINE_LIBRARY})
+target_link_libraries(inotify_own_wrapper ${ALL_LIBS})
 
 
 #add_executable(rax-login rax-login.cpp)

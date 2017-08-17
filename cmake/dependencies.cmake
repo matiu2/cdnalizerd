@@ -18,7 +18,7 @@ find_library(Z z)
 find_library(C c)
 
 ## Threads
-find_package(Threads)
+find_package(Threads REQUIRED)
 
 ## OpenSSL
 find_package(OpenSSL REQUIRED)

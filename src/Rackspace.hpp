@@ -1,8 +1,6 @@
 /// Logs in to rackspace and gives you a token
 #pragma once
 
-#include "logging.hpp"
-
 #include <jsonpp11/json_class.hpp>
 #include <jsonpp11/parse_to_json_class.hpp>
 #include <RESTClient/rest.hpp>

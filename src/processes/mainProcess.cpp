@@ -1,11 +1,10 @@
 #include "mainProcess.hpp"
 
 #include "../inotify.hpp"
-#include "../logging.hpp"
-
 #include "login.hpp"
 #include "syncAllDirectories.hpp"
 #include "../WorkerManager.hpp"
+#include "../jobs/upload.hpp"
 
 #include <boost/log/trivial.hpp>
 #include <boost/filesystem.hpp>
@@ -42,7 +41,7 @@ void createINotifyWatches(inotify::Instance &inotify, WatchToConfig& watchToConf
 }
 
 void watchForFileChanges(yield_context yield, const Config& config) {
-  BOOST_LOG_TRIVIAL(info) << "Creating inotify watches...";
+  std::clog << "INFO: Creating inotify watches..." << std::endl;
   // Setup
   inotify::Instance inotify(yield);
   // Maps inotify watch handles to config entries
@@ -57,16 +56,34 @@ void watchForFileChanges(yield_context yield, const Config& config) {
 
   syncAllDirectories(yield, accounts, config, workers);
 
-  /*
-  std::list<Job> jobsToDo;
-
   /// Holds file move operations that are waiting for a pair
   std::map<uint32_t, inotify::Event> cookies;
 
+
+  std::clog << "DEBUG: Waiting for file events" << std::endl;
   while (true) {
     inotify::Event event = inotify.waitForEvent();
-    BOOST_LOG_TRIVIAL(debug) << "Got an inotify event: " << event;
+    std::clog << "DEBUG: Got an inotify event: " << event << std::endl;
 
+    // Get the job data ready
+    const ConfigEntry &entry = watchToConfig[event.watch().handle()];
+    Rackspace &rs = accounts[entry.username];
+    fs::path localFile(event.path());
+    URL url(rs.getURL(*entry.region, entry.snet));
+    auto worker = workers.getWorker(url, rs);
+    std::string localRelativePath(
+        fs::relative(event.path(), entry.local_dir).string());
+
+    // If the file was closed and may have been written, upload if checksum is different
+    if (event.wasClosed()) {
+      std::clog << "DEBUG: File was closed for writing: " << localFile.native()
+                << std::endl;
+      worker->addJob(jobs::makeConditionalUploadJob(
+          localFile,
+          url / *entry.container / entry.remote_dir / localRelativePath));
+    }
+
+    /*
     // If it's a move event, find its pair
     if (event.cookie) {
       auto found = cookies.find(event.cookie);
@@ -96,16 +113,14 @@ void watchForFileChanges(yield_context yield, const Config& config) {
         inotify.addWatch(path.c_str(), maskToFollow);
         continue;
       }
-      // TODO: Sometimes files are created with > zero bytes
+      // TODO: Sometimes files are created with > zero bytes. Check the file
+      // size; if it's > 0, upload it
     }
-    // Create the job parts
-    const ConfigEntry &entry = watchToConfig[event.watch().handle()];
-    Rackspace &rs = accounts[entry.username];
-    fs::path localFile(joinPaths(entry.local_dir, event.path()));
-    URL remoteURL = URL(rs.getURL(*entry.region, entry.snet)) /
-                    *entry.container / entry.remote_dir /
-                    unJoinPaths(entry.local_dir, event.path());
+    if (event.wasClosed()) {
+      // File was closed; could have been written.
+      // Upload if newer than the remote
 
+    }
 
     // If this event is a move and has a destionation..
     if (event.wasMovedFrom()) {
@@ -132,8 +147,8 @@ void watchForFileChanges(yield_context yield, const Config& config) {
       job.source.swap(job.dest);
       job.dest.clear();
     }
+      */
   }
-*/
 }
 
 } /* processes  */ 

@@ -1,27 +1,12 @@
 project(src)
 
-set(ALL_LIBS
-    ${RESTClient} ${Boost_COROUTINE_LIBRARY} ${Boost_LOG_LIBRARY} ${Boost_LOG_SETUP_LIBRARY} ${Boost_IOSTREAMS_LIBRARY} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_DATE_TIME_LIBRARY}
-    ${Boost_CONTEXT_LIBRARY} 
-    ${Boost_FILESYSTEM_LIBRARY} 
-    ${Boost_THREAD_LIBRARY} 
-    ${Boost_SYSTEM_LIBRARY} 
-    ${OPENSSL_LIBRARIES}
-    ${CMAKE_THREAD_LIBS_INIT} 
-    ${DL}
-    ${CPP}
-    ${SUP_CPP}
-    ${Z}
-    ${C}
-)
-
 add_subdirectory(config_reader)
 
-add_executable(test_login test_login.cpp )
+add_executable(test_login test_login.cpp)
 add_dependencies(test_login jsonpp11)
 add_dependencies(test_login bandit)
 add_dependencies(test_login RESTClient2)
-target_link_libraries(test_login ${RESTClient} ${Boost_SYSTEM_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${Boost_LOG_LIBRARY})
+target_link_libraries(test_login ${ALL_LIBS})
 set_property(
   TARGET test_login
   APPEND
@@ -29,7 +14,7 @@ set_property(
 add_test(test_login test_login)
 
 add_executable(cdnalizerd 
-  main.cpp utils.cpp inotify.cpp AccountCache.cpp Job.cpp Worker.cpp logging.hpp
+  main.cpp utils.cpp inotify.cpp AccountCache.cpp Job.cpp Worker.cpp
   jobs/upload.cpp
   processes/mainProcess.cpp processes/login.cpp processes/list.cpp processes/syncAllDirectories.cpp
   config_reader/config_reader.cpp config_reader/config.cpp config_reader/config_writer.cpp)

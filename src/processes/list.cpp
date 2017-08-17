@@ -1,7 +1,5 @@
 #include "list.hpp"
 
-#include "../logging.hpp"
-
 #include <RESTClient/rest.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <jsonpp11/parse_to_json_class.hpp>
@@ -15,7 +13,7 @@ void genericDoListContainer(
     yield_context &yield, const Rackspace &rackspace, const ConfigEntry &entry,
     bool restrict_to_remote_dir, std::string extra_params = "") {
   RESTClient::http::URL baseURL(rackspace.getURL(*entry.region, entry.snet));
-  BOOST_LOG_TRIVIAL(info) << "Connecting to " << baseURL.host_part();
+  std::clog << "INFO: Connecting to " << baseURL.host_part() << std::endl;
   RESTClient::REST conn(yield, baseURL.host_part(),
                         {{"Content-type", "application/json"},
                          {"X-Auth-Token", rackspace.token()}});
@@ -33,11 +31,12 @@ void genericDoListContainer(
       path += "&prefix=" + prefix;
     if (!extra_params.empty())
       path.append(extra_params);
-    BOOST_LOG_TRIVIAL(debug) << "Requesting " << baseURL.host_part() + path;
+    std::clog << "DEBUG: Requesting " << baseURL.host_part() + path
+              << std::endl;
     auto response = conn.get(path).go();
-    BOOST_LOG_TRIVIAL(debug) << "Downloading info on "
-                             << response.headers["X-container-Object-Count"]
-                             << " objects";
+    std::clog << "DEBUG: Downloading info on "
+              << response.headers["X-container-Object-Count"] << " objects"
+              << std::endl;
     size_t count = out(response.body, marker);
     // If we didn't get 'limit' results, we're done
     assert(count <= limit);

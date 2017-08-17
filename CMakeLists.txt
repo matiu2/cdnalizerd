@@ -7,6 +7,30 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 -fstandalone-debug -f
 
 include_directories("/usr/include/libcxxabi")
 
+include(cmake/dependencies.cmake)
+
+message("Threading Library: ${CMAKE_THREAD_LIBS_INIT}")
+
+set(ALL_LIBS
+    ${RESTClient} 
+    ${Boost_COROUTINE_LIBRARY} 
+    ${Boost_CONTEXT_LIBRARY} 
+    ${Boost_IOSTREAMS_LIBRARY} 
+    ${Boost_PROGRAM_OPTIONS_LIBRARY} 
+    ${Boost_DATE_TIME_LIBRARY}
+    ${Boost_FILESYSTEM_LIBRARY} 
+    ${Boost_THREAD_LIBRARY} 
+    ${Boost_SYSTEM_LIBRARY} 
+    ${OPENSSL_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT} 
+    ${DL}
+    ${CPP}
+    ${SUP_CPP}
+    ${Z}
+    ${C}
+)
+
+
 add_definitions(-DBOOST_COROUTINE_NO_DEPRECATION_WARNING)
 add_definitions(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING)
 #ADD_DEFINITIONS(-DBOOST_LOG_NO_THREADS)
@@ -18,7 +42,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS "ON")
 
 enable_testing()
 
-include(cmake/dependencies.cmake)
 
 # Sub diretories
 add_subdirectory(src)

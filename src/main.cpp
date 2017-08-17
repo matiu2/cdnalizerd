@@ -9,9 +9,9 @@
 #include "processes/mainProcess.hpp"
 #include "processes/list.hpp"
 #include "processes/login.hpp"
-#include "logging.hpp"
 
 #include <boost/program_options.hpp>
+#include <boost/log/trivial.hpp>
 #include <RESTClient/http/interface.hpp>
 
 using namespace cdnalizerd;
@@ -41,13 +41,13 @@ int main(int argc, char **argv) {
   std::string config_file_name = options["config"].as<std::string>();
   if (options.count("create-sample")) {
     cdnalizerd::write_sample_config(config_file_name);
-    BOOST_LOG_TRIVIAL(info) << "Sample config file written to "
-                            << config_file_name;
+    std::clog << "INFO: Sample config file written to " << config_file_name
+              << std::endl;
     return 0;
   }
   if (options.count("list") || options.count("list-detailed") ||
       options.count("go")) {
-    BOOST_LOG_TRIVIAL(info) << "Reading config from " << config_file_name;
+    std::clog << "INFO: Reading config from " << config_file_name << std::endl;
     Config config = read_config(config_file_name);
     if (options.count("list"))
       RESTClient::http::spawn([&config](yield_context yield) {

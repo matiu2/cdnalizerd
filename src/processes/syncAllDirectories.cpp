@@ -5,7 +5,6 @@
 #include "list.hpp"
 #include "../Rackspace.hpp"
 #include "../jobs/upload.hpp"
-#include "../logging.hpp"
 #include "../utils.hpp"
 
 #include <boost/filesystem.hpp>
@@ -27,9 +26,9 @@ namespace fs = boost::filesystem;
 
 void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
                         const ConfigEntry &config, WorkerManager &workers) {
-  BOOST_LOG_TRIVIAL(debug) << "Syncing config entry: " << config.username
-                           << " - " << config.region
-                           << " - " << (config.snet ? "snet" : "no snet");
+  std::clog << "DEBUG: Syncing config entry: " << config.username << " - "
+            << config.region << " - " << (config.snet ? "snet" : "no snet")
+            << std::endl;
   URL baseURL(rs.getURL(*config.region, config.snet));
   RESTClient::REST conn(yield, baseURL.host_part());
   // Get iterators to our local files
@@ -41,8 +40,22 @@ void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
     return;
   }
   // We need to grab all the local files and sort them because the normal
-  // ordering is 'number of files in dir' or something; but we want them to be
+  // ordering is by inode number or something; but we want them to be
   // alphabetical, like what the cloud files server returns
+  // TODO: Don't fill a vector with potentially MBs of files.
+  // Solution 1: Make a smart iterator that iterates one directory, sorts it, then digs down.
+  //      Con 1: You might have to go very very deep, so you may have to
+  //       re-iterate over the contents again and again or cache a lot
+  //      Con 2: You may have one directory with millions of files in it anyway
+  // Solution 2: Download the entire contents of the remote container; if
+  //             necessary into memeory mapped files holding vectors, then for
+  //             each out of order file iteration, do a binary search.
+  //      Con 1: How much work will it be to do all the binary searches ?
+  //      Con 2: How much storage to hold all the remote container contents
+  //
+  //             I like this method (2) better though because it uses less in
+  //             program resources
+  //
   std::sort(localFiles.begin(), localFiles.end());
   auto local_iterator = localFiles.begin();
   auto local_end = localFiles.end();
@@ -114,11 +127,16 @@ struct CountSentry {
   CountSentry(size_t &count, boost::asio::deadline_timer &timer)
       : count(count), timer(timer) {
     ++count;
+    std::clog << "DEBUG: Incremented count: " << count << std::endl;
   }
   ~CountSentry() {
     --count;
-    if (count == 0)
-        timer.cancel();
+    std::clog << "DEBUG: Decremented count: " << count << std::endl;
+    if (count == 0) {
+      std::clog << "DEBUG: Decremented cancelling timer: " << count
+                << std::endl;
+      timer.cancel();
+    }
   }
 };
 
@@ -132,9 +150,15 @@ void syncAllDirectories(yield_context &yield, const AccountCache &accounts,
   for (const ConfigEntry &entry : config.entries()) {
     // Make a list of file information
     RESTClient::http::spawn([
-          &rs = accounts.at(entry.username), &entry,
-          sentry = std::move(CountSentry(syncWorkers, waitForSync)), &workers
-    ](yield_context y) { syncOneConfigEntry(y, rs, entry, workers); });
+          &rs = accounts.at(entry.username), &entry, &workers, &syncWorkers,
+          &waitForSync
+    ](yield_context y) {
+      std::clog << "DEBUG: Syncing config: " << entry.username << std::endl;
+      CountSentry sentry(syncWorkers, waitForSync);
+      syncOneConfigEntry(y, rs, entry, workers);
+      std::clog << "DEBUG: Done Syncing config: " << entry.username
+                << std::endl;
+    });
   }
 
   // Wait for all the logins to finish
