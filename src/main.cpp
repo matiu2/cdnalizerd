@@ -9,6 +9,7 @@
 #include "processes/mainProcess.hpp"
 #include "processes/list.hpp"
 #include "processes/login.hpp"
+#include "logging.hpp"
 
 #include <boost/program_options.hpp>
 #include <boost/log/trivial.hpp>
@@ -30,24 +31,35 @@ int main(int argc, char **argv) {
                        "filename, and does nothing else")("go",
                                                           "Start running...")(
       "list", "List all the containers from the config to standard out")(
-      "list-detailed", "List all the containers from the config to standard "
-                       "out, including md5sum, modification date (in UTC), "
-                       "content-type, size");
+      "list-detailed",
+      "List all the containers from the config to standard "
+      "out, including md5sum, modification date (in UTC), "
+      "content-type, size")("log-verbosity", po::value<int>()->default_value(0),
+                            "-9 to 9 - FATAL=-3, INFO=0, DEBUG=5, TRACE=9");
   po::variables_map options;
   po::store(po::parse_command_line(argc, argv, desc), options);
   options.notify();
+  
+  assert(options.count("log-verbosity"));
+  int verbosity = options["log-verbosity"].as<int>();
+  if ((verbosity < -9) || (verbosity > 9)) {
+    init_logging(9);
+    LOG_S(FATAL) << "--log-verbosity must be between -9 and 9";
+    return -1;
+  }
+  init_logging(verbosity);
 
   // Handle the options
   std::string config_file_name = options["config"].as<std::string>();
   if (options.count("create-sample")) {
     cdnalizerd::write_sample_config(config_file_name);
-    std::clog << "INFO: Sample config file written to " << config_file_name
-              << std::endl;
+    LOG_S(INFO) << "Sample config file written to " << config_file_name
+                << std::endl;
     return 0;
   }
   if (options.count("list") || options.count("list-detailed") ||
       options.count("go")) {
-    std::clog << "INFO: Reading config from " << config_file_name << std::endl;
+    LOG_S(INFO) << "Reading config from " << config_file_name << std::endl;
     Config config = read_config(config_file_name);
     if (options.count("list"))
       RESTClient::http::spawn([&config](yield_context yield) {

@@ -6,6 +6,7 @@
 #include "../Rackspace.hpp"
 #include "../jobs/upload.hpp"
 #include "../utils.hpp"
+#include "../logging.hpp"
 
 #include <boost/filesystem.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -26,9 +27,9 @@ namespace fs = boost::filesystem;
 
 void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
                         const ConfigEntry &config, WorkerManager &workers) {
-  std::clog << "DEBUG: Syncing config entry: " << config.username << " - "
-            << config.region << " - " << (config.snet ? "snet" : "no snet")
-            << std::endl;
+  LOG_S(5) << "Syncing config entry: " << config.username << " - "
+           << config.region << " - " << (config.snet ? "snet" : "no snet")
+           << std::endl;
   URL baseURL(rs.getURL(*config.region, config.snet));
   RESTClient::REST conn(yield, baseURL.host_part());
   // Get iterators to our local files
@@ -127,14 +128,13 @@ struct CountSentry {
   CountSentry(size_t &count, boost::asio::deadline_timer &timer)
       : count(count), timer(timer) {
     ++count;
-    std::clog << "DEBUG: Incremented count: " << count << std::endl;
+    LOG_S(5) << "Incremented count: " << count << std::endl;
   }
   ~CountSentry() {
     --count;
-    std::clog << "DEBUG: Decremented count: " << count << std::endl;
+    LOG_S(5) << "Decremented count: " << count << std::endl;
     if (count == 0) {
-      std::clog << "DEBUG: Decremented cancelling timer: " << count
-                << std::endl;
+      LOG_S(5) << "Decremented cancelling timer: " << count << std::endl;
       timer.cancel();
     }
   }
@@ -153,11 +153,10 @@ void syncAllDirectories(yield_context &yield, const AccountCache &accounts,
           &rs = accounts.at(entry.username), &entry, &workers, &syncWorkers,
           &waitForSync
     ](yield_context y) {
-      std::clog << "DEBUG: Syncing config: " << entry.username << std::endl;
+      LOG_S(5) << "Syncing config: " << entry.username << std::endl;
       CountSentry sentry(syncWorkers, waitForSync);
       syncOneConfigEntry(y, rs, entry, workers);
-      std::clog << "DEBUG: Done Syncing config: " << entry.username
-                << std::endl;
+      LOG_S(5) << "Done Syncing config: " << entry.username << std::endl;
     });
   }
 

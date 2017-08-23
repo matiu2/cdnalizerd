@@ -76,6 +76,7 @@ ExternalProject_Add(RESTClient2
 )
 SET(RESTClient2_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/RESTClient2/src)
 find_library(RESTClient RESTClient HINTS ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/RESTClient2-build/src)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/RESTClient2-build/3rd_party/src/loguru)
 
 ExternalProject_Add(jsonpp11
      PREFIX 3rd_party

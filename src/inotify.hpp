@@ -18,6 +18,7 @@
 #include <RESTClient/tcpip/interface.hpp>
 
 #include "utils.hpp"
+#include "logging.hpp"
 #include "config_reader/config.hpp"
 
 namespace cdnalizerd {
@@ -181,22 +182,21 @@ struct Instance {
   }
   const Watch &watchFromHandle(int handle) const { return watches.at(handle); }
   Watch &addWatch(const char *path, uint32_t mask) {
-    std::clog << "DEBUG: Watching path: " << path << " mask(" << std::hex
-              << mask << ") inotify handle(" << inotify_handle << ")"
-              << std::endl;
+    LOG_S(5) << "Watching path: " << path << " mask(" << std::hex << mask
+             << ") inotify handle(" << inotify_handle << ")" << std::endl;
     auto found = paths.find(path);
     if (found != paths.end())
       throw std::logic_error("Can't watch the same path twice");
     auto watch = Watch(inotify_handle, path, mask);
-    std::clog << "DEBUG: watch handle for path (" << path
-              << ") = " << watch.handle() << std::endl;
+    LOG_S(5) << "watch handle for path (" << path << ") = " << watch.handle()
+             << std::endl;
     paths.insert({watch.path, watch.handle()});
     auto result =
         watches.emplace(std::make_pair(watch.handle(), std::move(watch)));
     return result.first->second;
   }
   void removeWatch(Watch &watch) {
-    std::clog << "DEBUG: Removing watch: " << watch.path << std::endl;
+    LOG_S(5) << "Removing watch: " << watch.path << std::endl;
     auto found = watches.find(watch.handle());
     if (found != watches.end()) {
       paths.erase(found->second.path);

@@ -5,6 +5,7 @@
 #include "syncAllDirectories.hpp"
 #include "../WorkerManager.hpp"
 #include "../jobs/upload.hpp"
+#include "../logging.hpp"
 
 #include <boost/log/trivial.hpp>
 #include <boost/filesystem.hpp>
@@ -41,7 +42,7 @@ void createINotifyWatches(inotify::Instance &inotify, WatchToConfig& watchToConf
 }
 
 void watchForFileChanges(yield_context yield, const Config& config) {
-  std::clog << "INFO: Creating inotify watches..." << std::endl;
+  LOG_S(INFO) << "Creating inotify watches..." << std::endl;
   // Setup
   inotify::Instance inotify(yield);
   // Maps inotify watch handles to config entries
@@ -59,11 +60,10 @@ void watchForFileChanges(yield_context yield, const Config& config) {
   /// Holds file move operations that are waiting for a pair
   std::map<uint32_t, inotify::Event> cookies;
 
-
-  std::clog << "DEBUG: Waiting for file events" << std::endl;
+  LOG_S(5) << "Waiting for file events" << std::endl;
   while (true) {
     inotify::Event event = inotify.waitForEvent();
-    std::clog << "DEBUG: Got an inotify event: " << event << std::endl;
+    LOG_S(5) << "Got an inotify event: " << event << std::endl;
 
     // Get the job data ready
     const ConfigEntry &entry = watchToConfig[event.watch().handle()];
@@ -76,8 +76,8 @@ void watchForFileChanges(yield_context yield, const Config& config) {
 
     // If the file was closed and may have been written, upload if checksum is different
     if (event.wasClosed()) {
-      std::clog << "DEBUG: File was closed for writing: " << localFile.native()
-                << std::endl;
+      LOG_S(5) << "File was closed for writing: " << localFile.native()
+               << std::endl;
       worker->addJob(jobs::makeConditionalUploadJob(
           localFile,
           url / *entry.container / entry.remote_dir / localRelativePath));

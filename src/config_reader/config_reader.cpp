@@ -1,5 +1,6 @@
 #include "config_reader.hpp"
 #include "errors.hpp"
+#include "../logging.hpp"
 
 #include <algorithm>
 #include <boost/algorithm/string/predicate.hpp>
@@ -85,9 +86,9 @@ struct ConfigReader {
         boost::property_tree::info_parser::read_info(filename, pt);
       parseTree(pt);
     } catch (...) {
-      std::clog << "ERROR: Unable to load config file: '" << filename << "': "
-                << boost::current_exception_diagnostic_information(true)
-                << std::endl;
+      LOG_S(ERROR) << "Unable to load config file: '" << filename << "': "
+                   << boost::current_exception_diagnostic_information(true)
+                   << std::endl;
     }
   }
 
@@ -125,9 +126,9 @@ Config read_config(const std::string &dir_name) {
     Config result = reader.getConfig();
     return result;
   } catch (...) {
-    std::clog << "ERROR: Unable to load config directory: '"
-              << boost::current_exception_diagnostic_information(true)
-              << std::endl;
+    LOG_S(ERROR) << "Unable to load config directory: '"
+                 << boost::current_exception_diagnostic_information(true)
+                 << std::endl;
     throw;
   }
 }

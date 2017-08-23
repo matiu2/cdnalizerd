@@ -1,5 +1,7 @@
 #include "login.hpp"
 
+#include "../logging.hpp"
+
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/system/system_error.hpp>
 
@@ -10,7 +12,7 @@ namespace cdnalizerd {
 // Fills the cache of all accounts - spawns more cooperative threads and waits for them
 void login(yield_context &yield, AccountCache& accounts, const Config& config) {
   // Spawn some workers to fill in the account info (token and urls)
-  std::clog << "INFO: Getting API Authentication tokens..." << std::endl;
+  LOG_S(INFO) << "Getting API Authentication tokens..." << std::endl;
   boost::asio::deadline_timer waitForLogins(*RESTClient::tcpip::getService(),
                                             boost::posix_time::minutes(10));
   int loginWorkers = 2;

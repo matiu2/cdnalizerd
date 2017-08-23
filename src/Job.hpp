@@ -1,5 +1,7 @@
 #pragma once
 
+#include "logging.hpp"
+
 #include <functional>
 #include <iostream>
 #include <ostream>
@@ -27,7 +29,7 @@ struct Job {
   const Work go;
   Job(std::string name, Work go)
       : id(nextId++), name(std::move(name)), go(go) {
-    std::clog << "DEBUG: Job created: " << *this << std::endl;
+    LOG_S(5) << "Job created: " << *this << std::endl;
   }
   Job(Job&& other) = default;
    // Can't copy them because then you'd have two with the same ID
