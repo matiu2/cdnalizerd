@@ -3,7 +3,6 @@
 
 #include <jsonpp11/json_class.hpp>
 #include <jsonpp11/parse_to_json_class.hpp>
-#include <RESTClient/rest.hpp>
 
 #include <stdexcept>
 
@@ -17,11 +16,6 @@ struct LoginFailed : std::runtime_error {
 };
 
 using namespace std::string_literals;
-
-using RESTClient::http::yield_context;
-using RESTClient::http::URL;
-using RESTClient::http::Response;
-using RESTClient::REST;
 
 class Rackspace {
 public:
