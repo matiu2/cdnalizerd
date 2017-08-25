@@ -12,11 +12,12 @@
 #include <loguru.hpp>
 
 #include <cstdlib>
+#include "https.hpp"
 
 namespace asio = boost::asio;
+using tcp = boost::asio::ip::tcp;
 namespace beast = boost::beast;
 namespace ssl = boost::asio::ssl;
-using tcp = boost::asio::ip::tcp;
 namespace http = boost::beast::http;
 namespace pt = boost::property_tree;
 
@@ -35,22 +36,14 @@ int testLogin(boost::asio::yield_context yield, asio::io_service& ios) {
   std::stringstream output;
   auto creds = getCredentials();
   int result = 0;
-  tcp::resolver dns{ios};
-  tcp::socket sock{ios};
 
-  // ssl context
+  // SSL context
   ssl::context ctx{ssl::context::tlsv12};
   ctx.set_default_verify_paths();
 
-  // ssl stream
+  // SSL stream
   const std::string host("identity.api.rackspacecloud.com");
-  ssl::stream<asio::ip::tcp::socket &> s(sock, ctx);
-  s.set_verify_mode(ssl::verify_peer);
-  s.set_verify_callback(ssl::rfc2818_verification(host));
-  auto const lookup = dns.async_resolve({host, "https"}, yield);
-  asio::async_connect(sock, lookup, yield);
-  sock.set_option(tcp::no_delay(true));
-  s.handshake(decltype(s)::client);
+  cdnalizerd::HTTPS https(yield, ios, host);
   
   // Make the request body
   boost::property_tree::ptree out;
@@ -71,7 +64,7 @@ int testLogin(boost::asio::yield_context yield, asio::io_service& ios) {
 
   LOG_S(1) << "Sending Request: " << req;
   try {
-    http::async_write(s, req, yield);
+    http::async_write(https.stream(), req, yield);
   } catch (boost::system::system_error& e) {
     LOG_S(FATAL) << e.code().message();
     return -1;
@@ -90,53 +83,19 @@ int testLogin(boost::asio::yield_context yield, asio::io_service& ios) {
   http::response<http::string_body> res;
 
   // Receive the HTTP response
-  http::async_read(s, buffer, res, yield);
+  http::async_read(https.stream(), buffer, res, yield);
   if (res.result() != http::status::ok) {
     LOG_S(ERROR) << "Invalid response code: " << res.result() << " body:\n" << res;
     throw std::runtime_error("Bad http response code");
   }
 
   boost::system::error_code ec;
-  s.async_shutdown(yield[ec]);
 
   pt::ptree data;
   std::stringstream in(res.body.data()); 
   pt::read_json(in, data);
   std::string token = data.get<std::string>("access.token.id");
   LOG_S(INFO) << "Got token: " << token;
-
-  using asio::error::misc_errors;
-  using asio::error::basic_errors;
-  const auto &misc_cat = asio::error::get_misc_category();
-  const auto &ssl_cat = asio::error::get_ssl_category();
-  // This error means the remote party has initiated has already closed the
-  // underlying transport (TCP FIN) without shutting down the SSL.
-  // It may be a truncate attack attempt, but nothing we can do about it
-  // except close the connection.
-  if (ec.category() == ssl_cat &&
-      ec.value() == ERR_PACK(ERR_LIB_SSL, 0, SSL_R_SHORT_READ)) {
-    // SSL Shutdown - remote party just dropped TCP FIN instead of closing
-    // SSL protocol. Possible truncate attack - closing connection.
-    return result;
-  }
-  // We are the first one to run ssl_shutdown, and remote party responded in
-  // kind, just continue
-  if (ec.category() == misc_cat && ec.value() == misc_errors::eof) {
-    return result;
-  }
-  // The remote party sent ssl_shutdown, then just dropped the connection
-  if (ec.category() == misc_cat &&
-      ec.value() == basic_errors::operation_aborted) {
-    return result;
-  }
-  // Everything went as planned
-  if (ec.category() == boost::system::system_category() &&
-      ec.value() == boost::system::errc::success) {
-    return result;
-  }
-
-  // Something scary happened, log an error (throw an exception too)
-  LOG_S(FATAL) << "Unable to close down SSL connection";
 
   return result;
 }
