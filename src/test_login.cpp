@@ -89,8 +89,6 @@ int testLogin(boost::asio::yield_context yield, asio::io_service& ios) {
     throw std::runtime_error("Bad http response code");
   }
 
-  boost::system::error_code ec;
-
   pt::ptree data;
   std::stringstream in(res.body.data()); 
   pt::read_json(in, data);

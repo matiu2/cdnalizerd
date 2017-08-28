@@ -10,13 +10,10 @@
 #include <boost/log/trivial.hpp>
 #include <boost/filesystem.hpp>
 
-#include <RESTClient/http/url.hpp>
-
 namespace cdnalizerd {
 namespace processes {
 
 namespace fs = boost::filesystem;
-using RESTClient::http::URL;
 
 constexpr int maskToFollow =
     IN_CREATE | IN_CLOSE_WRITE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO;

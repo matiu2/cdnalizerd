@@ -1,19 +1,13 @@
 #include "Worker.hpp"
 
 #include "logging.hpp"
-
-#include <RESTClient/rest.hpp>
-#include <RESTClient/tcpip/interface.hpp>
+#include "https.hpp"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/exception/exception.hpp>
 
 namespace cdnalizerd {
-
-using RESTClient::http::URL;
-using RESTClient::http::Response;
-using RESTClient::REST;
 
 // Removes workers from our list when we're done with them
 struct OnDoneSentry {
@@ -24,7 +18,7 @@ struct OnDoneSentry {
   }
 };
 
-void doWork(Worker &worker, yield_context yield) {
+void doWork(Worker &worker, asio::yield_context yield) {
   // Find which worker wants this job
   OnDoneSentry onDoneSentry(worker);
   auto stateSentry = worker.setState(Working);
@@ -32,7 +26,8 @@ void doWork(Worker &worker, yield_context yield) {
   LOG_SCOPE_FUNCTION(INFO);
   LOG_S(INFO) << "Worker " << &worker << " connecting to "
               << worker.url.host_part() << std::endl;
-  REST conn(yield, worker.url.host_part(), {{"X-Auth-Token", worker.token()}});
+  HTTPS conn(yield, worker.url.host_part());
+
   while (worker.hasMoreJobs()) {
     Job job = std::move(worker.getNextJob());
     LOG_S(INFO) << "Running job: " << job.id << " " << job.name << std::endl;
@@ -56,7 +51,7 @@ void doWork(Worker &worker, yield_context yield) {
     if (!worker.hasMoreJobs()) {
       // If we have no more work to do, keep the connection open for some time
       stateSentry.updateState(Idle);
-      boost::asio::deadline_timer idleTimer(*RESTClient::tcpip::getService(),
+      boost::asio::deadline_timer idleTimer(service(),
                                             boost::posix_time::seconds(20));
       idleTimer.async_wait(yield);
       if (worker.hasMoreJobs())
@@ -73,7 +68,8 @@ void Worker::launch(std::function<void()> onDone) {
   assert(onDone);
   _onDone = onDone;
   _state = Ready;
-  RESTClient::http::spawn(std::bind(doWork, std::ref(*this), std::placeholders::_1));
+  asio::spawn(service(),
+              std::bind(doWork, std::ref(*this), std::placeholders::_1));
 }
 
 } /* cdnalizerd  */ 

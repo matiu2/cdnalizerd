@@ -50,19 +50,6 @@ ExternalProject_Add(hana
 SET(HANA_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/hana/include)
 INCLUDE_DIRECTORIES(${HANA_INCLUDE_DIR})
 
-## Bandit (for tests)
-ExternalProject_Add(bandit
-    PREFIX 3rd_party
-    GIT_REPOSITORY https://github.com/joakimkarlsson/bandit.git
-    TLS_VERIFY true
-    GIT_SHALLOW 1
-    TLS_CAINFO certs/DigiCertHighAssuranceEVRootCA.crt
-    BUILD_COMMAND ""
-    UPDATE_COMMAND "" # Skip annoying updates for every build
-    INSTALL_COMMAND ""
-)
-SET(BANDIT_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/bandit)
-
 ## Beast - Allows us to talk to Rackspace cloud files et al.
 
 ExternalProject_Add(Beast
@@ -98,16 +85,3 @@ ExternalProject_Add(Loguru
 )
 SET(LOGURU_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/Loguru")
 INCLUDE_DIRECTORIES(${LOGURU_INCLUDE_DIR})
-
-ExternalProject_Add(jsonpp11
-     PREFIX 3rd_party
-     GIT_REPOSITORY https://github.com/matiu2/jsonpp11.git
-     TLS_VERIFY true
-     GIT_SHALLOW 1
-     TLS_CAINFO certs/DigiCertHighAssuranceEVRootCA.crt
-     TEST_BEFORE_INSTALL 0
-     TEST_COMMAND ""   # Test command requires rackspace cloud authentication to work
-     UPDATE_COMMAND "" # Skip annoying updates for every build
-     INSTALL_COMMAND ""
- )
-SET(JSONPP11_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/jsonpp11/src)

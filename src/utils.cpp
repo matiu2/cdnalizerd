@@ -8,32 +8,6 @@
 
 namespace cdnalizerd {
 
-std::string getContainerUrl(const Rackspace &login, const ConfigEntry &config) {
-  // Can't watch a dir until we're logged in to rackspace
-  assert(login.status() == Rackspace::Ready);
-  const json::JList &regions =
-      login.loginJSON().at("access").at("serviceCatalog").at("cloudFiles").at(
-          "endPoints");
-  std::string url;
-  // We get a list of regions, it doesn't come as a json dict, so we have to
-  // scan through them to find our configured region
-  for (const auto &region : regions) {
-    if (region.at("region") == *config.region) {
-      if (config.snet)
-        url = region.at("privateURL");
-      else
-        url = region.at("publicURL");
-      break;
-    }
-  }
-  if (url.empty())
-    throw std::runtime_error(
-        std::string("Unable to find url for cloud files region: ") +
-        *config.region);
-  url = joinPaths(joinPaths(url, *config.container), config.remote_dir);
-  return url;
-}
-
 bool isDir(const char *path) {
   struct stat sb;
   return (stat(path, &sb) == 0) && (S_ISDIR(sb.st_mode));

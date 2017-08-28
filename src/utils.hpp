@@ -9,8 +9,6 @@
 
 namespace cdnalizerd {
 
-std::string getContainerUrl(const Rackspace &login, const ConfigEntry &config);
-
 /// Returns true if 'path' is a directory
 bool isDir(const char *path);
 

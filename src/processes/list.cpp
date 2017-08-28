@@ -2,9 +2,7 @@
 
 #include "../logging.hpp"
 
-#include <RESTClient/rest.hpp>
 #include <boost/algorithm/string/split.hpp>
-#include <jsonpp11/parse_to_json_class.hpp>
 
 namespace cdnalizerd {
 
@@ -14,11 +12,10 @@ void genericDoListContainer(
     std::function<size_t(const std::string &, std::string &)> out,
     yield_context &yield, const Rackspace &rackspace, const ConfigEntry &entry,
     bool restrict_to_remote_dir, std::string extra_params = "") {
-  RESTClient::http::URL baseURL(rackspace.getURL(*entry.region, entry.snet));
+  URL baseURL(rackspace.getURL(*entry.region, entry.snet));
   LOG_S(INFO) << "Connecting to " << baseURL.host_part() << std::endl;
-  RESTClient::REST conn(yield, baseURL.host_part(),
-                        {{"Content-type", "application/json"},
-                         {"X-Auth-Token", rackspace.token()}});
+  HTTP conn(yield, baseURL.host_part(), {{"Content-type", "application/json"},
+                                         {"X-Auth-Token", rackspace.token()}});
   const size_t limit = 10000;
   std::string marker;
   std::string prefix;

@@ -5,43 +5,43 @@ namespace inotify {
   
 std::ostream &operator<<(std::ostream &out, const Event &e) {
   using namespace std;
-  cout << "Event: path(" << e.path() << ") ";
+  out << "Event: path(" << e.path() << ") ";
   if (e.wasAccessed())
-    cout << " Accessed ";
+    out << " Accessed ";
   if (e.wasModified())
-    cout << " Modified ";
+    out << " Modified ";
   if (e.wasChanged())
-    cout << " Changed ";
+    out << " Changed ";
   if (e.wasSaved())
-    cout << " Saved ";
+    out << " Saved ";
   if (e.wasClosedWithoutSave())
-    cout << " ClosedWithoutSave ";
+    out << " ClosedWithoutSave ";
   if (e.wasOpened())
-    cout << " Opened ";
+    out << " Opened ";
   if (e.wasMovedFrom())
-    cout << " MovedFrom ";
+    out << " MovedFrom ";
   if (e.wasMovedTo())
-    cout << " MovedTo ";
+    out << " MovedTo ";
   if (e.wasCreated())
-    cout << " Created ";
+    out << " Created ";
   if (e.wasDeleted())
-    cout << " Deleted ";
+    out << " Deleted ";
   if (e.wasSelfDeleted())
-    cout << " SelfDeleted ";
+    out << " SelfDeleted ";
   if (e.wasSelfMoved())
-    cout << " SelfMoved ";
+    out << " SelfMoved ";
   if (e.onlyIfDir())
-    cout << " onlyIfDir ";
+    out << " onlyIfDir ";
   if (e.dontFollow())
-    cout << " dontFollow ";
+    out << " dontFollow ";
   if (e.excludeEventsOnUnlinkedObjects())
-    cout << " excludeEventsOnUnlinkedObjects ";
+    out << " excludeEventsOnUnlinkedObjects ";
   if (e.addToTheMask())
-    cout << " addToTheMask ";
+    out << " addToTheMask ";
   if (e.isDir())
-    cout << " isDir ";
+    out << " isDir ";
   if (e.oneShot())
-    cout << " oneShot ";
+    out << " oneShot ";
   return out;
 }
 

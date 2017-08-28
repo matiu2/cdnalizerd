@@ -10,16 +10,18 @@
 #include "processes/list.hpp"
 #include "processes/login.hpp"
 #include "logging.hpp"
+#include "https.hpp"
 
 #include <boost/program_options.hpp>
 #include <boost/log/trivial.hpp>
-#include <RESTClient/http/interface.hpp>
 
 using namespace cdnalizerd;
 
 namespace po = boost::program_options;
 
 int main(int argc, char **argv) {
+  asio::io_service ios;
+  cdnalizerd::service(&ios);
   // See if we have a --config_file option
   po::options_description desc("Allowed options");
   desc.add_options()("help", "Show help message")(
@@ -62,22 +64,22 @@ int main(int argc, char **argv) {
     LOG_S(INFO) << "Reading config from " << config_file_name << std::endl;
     Config config = read_config(config_file_name);
     if (options.count("list"))
-      RESTClient::http::spawn([&config](yield_context yield) {
+      asio::spawn(ios, [&config](yield_context yield) {
         AccountCache accounts;
         login(yield, accounts, config);
         cdnalizerd::processes::listContainers(std::move(yield), accounts, config);
       });
     else if (options.count("list-detailed"))
-      RESTClient::http::spawn([&config](yield_context yield) {
+      asio::spawn(ios, [&config](yield_context yield) {
         AccountCache accounts;
         login(yield, accounts, config);
         cdnalizerd::processes::JSONListContainers(std::move(yield), accounts, config);
       });
     else if (options.count("go"))
-      RESTClient::http::spawn([&config](yield_context yield) {
+      asio::spawn(ios, [&config](yield_context yield) {
         cdnalizerd::processes::watchForFileChanges(std::move(yield), config);
       });
-    RESTClient::http::run();
+    ios.run();
     return 0;
   } else {
     using namespace std;

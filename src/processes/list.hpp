@@ -22,7 +22,7 @@ using ListContainerCoroutine = boost::coroutines::coroutine<std::vector<std::str
 using ListContainerResult = ListContainerCoroutine::pull_type;
 using ListContainerOut = ListContainerCoroutine::push_type;
 
-using JSONListContainerCoroutine = boost::coroutines::coroutine<json::JList>;
+using JSONListContainerCoroutine = boost::coroutines::coroutine<pt::ptree>;
 using JSONListContainerResult = JSONListContainerCoroutine::pull_type;
 using JSONListContainerOut = JSONListContainerCoroutine::push_type;
 

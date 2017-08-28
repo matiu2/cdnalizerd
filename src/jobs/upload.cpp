@@ -38,8 +38,16 @@ const std::string md5_from_file(const fs::path& path) {
 }
 
 Job makeUploadJob(fs::path source, URL dest) {
-  Job::Work go = [source, dest](REST &conn) {
+  Job::Work go = [source, dest](HTTPS &conn) {
     std::ifstream file(source.native());
+    http::request<http::file_body> req;
+    setDefaultHeaders(req);
+    req.method(http::verb::put);
+    file.seek(0, file.end);
+    size_T 
+    req.set(http::field::content_length, 0);
+    req.body = file;
+
     conn.put(dest.path_part()).body(file).go();
   };
   return Job("Upload "s + source.string() + " to " + dest.whole(), go);
@@ -56,7 +64,7 @@ Job makeConditionalUploadJob(fs::path source, URL dest) {
       std::string md5(md5_from_file(source));
       // Get the MD5 of the remote file
       DLOG_S(5) << "Requesting URL: " << dest.whole() << std::endl;
-      RESTClient::http::Response response(
+      http::Response response(
           conn.head(dest.path_part())
               .add_header("Accept", "*/*")
               .add_header("Accept-Encoding", "gzip, deflate")

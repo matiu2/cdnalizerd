@@ -3,13 +3,16 @@
 #include <queue>
 #include <memory>
 #include <functional>
+#include <boost/asio.hpp>
 
 #include "Rackspace.hpp"
 #include "Job.hpp"
+#include "url.hpp"
 
 namespace cdnalizerd {
 
 enum WorkerState { Raw, Ready, Working, Idle, Dead };
+namespace asio = boost::asio;
 
 class StateSentry {
 private:
@@ -31,6 +34,7 @@ class Worker {
 private:
   // Info for making connections
   const Rackspace& rs;
+  asio::io_service &ios;
   WorkerState _state;
   // Mechanism to stop working when we have no new jobs
   std::function<void()> _onDone;
@@ -40,8 +44,8 @@ private:
 
 public:
   // Consstructor
-  Worker(const Rackspace &rs, URL url)
-      : rs(rs), _state(Raw), url(std::move(url)) {}
+  Worker(const Rackspace &rs, asio::io_service &ios, URL url)
+      : rs(rs), ios(ios), _state(Raw), url(std::move(url)) {}
   Worker(const Worker&) = delete;
   Worker(Worker&&) = default;
   void launch(std::function<void()> onDone);

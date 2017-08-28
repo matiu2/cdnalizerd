@@ -3,8 +3,6 @@
 /// doing. This part of the program pulls in all our libraries
 /// * inotify - to watch for file changes
 /// * config_reader - to set up the rules
-/// * curlpp11 - to talk to the API endpoints
-/// * jsonpp11 - to understand the API endpoints
 
 // Inotify events to look out for:
 // IN_CLOSE_WRITE, IN_DELETE, IN_MOVED_FROM, IN_MOVED_TO
@@ -20,8 +18,6 @@
 #include "utils.hpp"
 
 namespace cdnalizerd {
-
-using RESTClient::http::yield_context;
 
 struct Watcher {
 private:

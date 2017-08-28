@@ -15,9 +15,8 @@
 #include <boost/optional.hpp>
 #include <boost/filesystem.hpp>
 
-#include <RESTClient/tcpip/interface.hpp>
-
 #include "utils.hpp"
+#include "https.hpp"
 #include "logging.hpp"
 #include "config_reader/config.hpp"
 
@@ -160,7 +159,7 @@ union RawEvent {
 struct Instance {
   yield_context &yield;
   int inotify_handle;
-  std::shared_ptr<RESTClient::tcpip::io_service> io;
+  asio::io_service& ios;
   asio::posix::stream_descriptor stream;
   boost::asio::mutable_buffers_1 buffer;
 
@@ -174,8 +173,7 @@ struct Instance {
 
   Instance(yield_context &yield)
       : yield(yield), inotify_handle(inotify_init1(IN_NONBLOCK)),
-        io(RESTClient::tcpip::getService()), stream(*io),
-        buffer(asio::buffer(data.raw)) {
+        ios(service()), stream(ios), buffer(asio::buffer(data.raw)) {
     if (inotify_handle == -1)
       throw std::system_error(errno, std::system_category());
     stream.assign(inotify_handle);

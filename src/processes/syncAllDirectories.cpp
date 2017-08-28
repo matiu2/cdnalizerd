@@ -14,14 +14,10 @@
 #include <set>
 #include <iostream>
 
-#include <RESTClient/http/interface.hpp>
 #include <boost/asio/deadline_timer.hpp>
 
 namespace cdnalizerd {
 namespace processes {
-
-using RESTClient::http::yield_context;
-using RESTClient::http::URL;
 
 namespace fs = boost::filesystem;
 
@@ -31,7 +27,7 @@ void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
            << config.region << " - " << (config.snet ? "snet" : "no snet")
            << std::endl;
   URL baseURL(rs.getURL(*config.region, config.snet));
-  RESTClient::REST conn(yield, baseURL.host_part());
+  HTTPS conn(yield, baseURL.host_part());
   // Get iterators to our local files
   std::vector<fs::path> localFiles(
       fs::recursive_directory_iterator(config.local_dir),
@@ -144,12 +140,12 @@ void syncAllDirectories(yield_context &yield, const AccountCache &accounts,
                         const Config &config, WorkerManager& workers) {
   // Sync all the entries in parallel, and block the main thread with a timer
   // until they're all done
-  boost::asio::deadline_timer waitForSync(*RESTClient::tcpip::getService(),
+  boost::asio::deadline_timer waitForSync(service(),
                                           boost::posix_time::minutes(10));
   size_t syncWorkers(0);
   for (const ConfigEntry &entry : config.entries()) {
     // Make a list of file information
-    RESTClient::http::spawn([
+    asio::spawn([
           &rs = accounts.at(entry.username), &entry, &workers, &syncWorkers,
           &waitForSync
     ](yield_context y) {
