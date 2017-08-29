@@ -39,8 +39,11 @@ const std::string md5_from_file(const fs::path& path) {
 
 Job makeUploadJob(fs::path source, URL dest) {
   Job::Work go = [source, dest](REST &conn) {
+    // Get the MD5 of the local file
+    DLOG_S(5) << "Getting MD5 of local file: " << source.native();
+    std::string md5(md5_from_file(source));
     std::ifstream file(source.native());
-    conn.put(dest.path_part()).body(file).go();
+    conn.put(dest.path_part()).add_header("ETag", md5).body(file).go();
   };
   return Job("Upload "s + source.string() + " to " + dest.whole(), go);
 }
@@ -58,7 +61,7 @@ Job makeConditionalUploadJob(fs::path source, URL dest) {
       DLOG_S(5) << "Requesting URL: " << dest.whole() << std::endl;
       RESTClient::http::Response response(
           conn.head(dest.path_part())
-              .add_header("Accept", "*/*")
+              .add_header("Accept", "application/json")
               .add_header("Accept-Encoding", "gzip, deflate")
               .go());
       if ((response.code < 200) || (response.code >= 300)) {
@@ -76,7 +79,7 @@ Job makeConditionalUploadJob(fs::path source, URL dest) {
       std::string remoteMD5(response.headers.at("ETag"));
       if (md5 != remoteMD5) {
         std::ifstream file(source.native());
-        conn.put(dest.path_part()).body(file).go();
+        conn.put(dest.path_part()).add_header("ETag", md5).body(file).go();
       }
     } catch (std::exception& e) {
       using namespace std;

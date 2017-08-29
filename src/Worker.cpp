@@ -32,7 +32,9 @@ void doWork(Worker &worker, yield_context yield) {
   LOG_SCOPE_FUNCTION(INFO);
   LOG_S(INFO) << "Worker " << &worker << " connecting to "
               << worker.url.host_part() << std::endl;
-  REST conn(yield, worker.url.host_part(), {{"X-Auth-Token", worker.token()}});
+  REST conn(
+      yield, worker.url.host_part(),
+      {{"X-Auth-Token", worker.token()}, {"User-Agent", "cdnalalizer v0.3"}});
   while (worker.hasMoreJobs()) {
     Job job = std::move(worker.getNextJob());
     LOG_S(INFO) << "Running job: " << job.id << " " << job.name << std::endl;
