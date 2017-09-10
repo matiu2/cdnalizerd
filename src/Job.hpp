@@ -19,7 +19,7 @@ struct Job;
 inline std::ostream &operator<<(std::ostream &out, const Job& job);
  
 struct Job {
-  using Work = std::function<void(HTTPS&)>;
+  using Work = std::function<void(HTTPS&, const std::string&)>;
   static size_t nextId;
   const size_t id;
   const std::string name;

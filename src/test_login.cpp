@@ -43,7 +43,7 @@ int testLogin(boost::asio::yield_context yield, asio::io_service& ios) {
 
   // SSL stream
   const std::string host("identity.api.rackspacecloud.com");
-  cdnalizerd::HTTPS https(yield, ios, host);
+  cdnalizerd::HTTPS https(yield, host);
   
   // Make the request body
   boost::property_tree::ptree out;
@@ -99,9 +99,10 @@ int testLogin(boost::asio::yield_context yield, asio::io_service& ios) {
 }
 
 int main(int argc, char *argv[]) {
+  asio::io_service ios;
+  cdnalizerd::service(&ios);
   int result;
   loguru::g_stderr_verbosity = 9;
-  boost::asio::io_service ios;
   boost::asio::spawn(ios, [&ios] (asio::yield_context y) { testLogin(y, ios); });
   ios.run();
   return result;

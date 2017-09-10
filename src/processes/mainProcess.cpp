@@ -6,11 +6,15 @@
 #include "../WorkerManager.hpp"
 #include "../jobs/upload.hpp"
 #include "../logging.hpp"
+#include "../exception_tags.hpp"
 
 #include <boost/log/trivial.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/exception/enable_error_info.hpp>
+#include <boost/throw_exception.hpp>
 
 namespace cdnalizerd {
+
 namespace processes {
 
 namespace fs = boost::filesystem;
@@ -64,7 +68,13 @@ void watchForFileChanges(yield_context yield, const Config& config) {
 
     // Get the job data ready
     const ConfigEntry &entry = watchToConfig[event.watch().handle()];
-    Rackspace &rs = accounts[entry.username];
+    auto found =accounts.find(entry.username);
+    if (found == accounts.end())
+      BOOST_THROW_EXCEPTION(boost::enable_error_info(std::runtime_error(
+                                "All Rackspace accounts should be initialized "
+                                "by the time this is called"))
+                            << err::username(*entry.username));
+    Rackspace &rs = found->second;
     fs::path localFile(event.path());
     URL url(rs.getURL(*entry.region, entry.snet));
     auto worker = workers.getWorker(url, rs);

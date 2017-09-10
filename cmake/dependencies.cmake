@@ -50,6 +50,22 @@ ExternalProject_Add(hana
 SET(HANA_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/hana/include)
 INCLUDE_DIRECTORIES(${HANA_INCLUDE_DIR})
 
+## JSON - Nice json parser
+
+ExternalProject_Add(json
+    PREFIX 3rd_party
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_SHALLOW 1
+    TLS_VERIFY true
+    TLS_CAINFO certs/DigiCertHighAssuranceEVRootCA.crt
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    UPDATE_COMMAND "" # Skip annoying updates for every build
+    INSTALL_COMMAND ""
+)
+SET(EXTRA_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/json/src)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/json/src)
+
 ## Beast - Allows us to talk to Rackspace cloud files et al.
 
 ExternalProject_Add(Beast

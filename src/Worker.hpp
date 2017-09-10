@@ -34,7 +34,6 @@ class Worker {
 private:
   // Info for making connections
   const Rackspace& rs;
-  asio::io_service &ios;
   WorkerState _state;
   // Mechanism to stop working when we have no new jobs
   std::function<void()> _onDone;
@@ -44,8 +43,8 @@ private:
 
 public:
   // Consstructor
-  Worker(const Rackspace &rs, asio::io_service &ios, URL url)
-      : rs(rs), ios(ios), _state(Raw), url(std::move(url)) {}
+  Worker(const Rackspace &rs, URL url)
+      : rs(rs), _state(Raw), url(std::move(url)) {}
   Worker(const Worker&) = delete;
   Worker(Worker&&) = default;
   void launch(std::function<void()> onDone);

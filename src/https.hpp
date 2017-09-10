@@ -3,7 +3,6 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/asio/spawn.hpp>
-// Only included for convenience
 #include <boost/beast.hpp>
 
 #include "logging.hpp"
@@ -26,14 +25,16 @@ public:
   using Stream = ssl::stream<asio::ip::tcp::socket &>;
 private:
   asio::io_service &ios;
-  asio::yield_context &yield;
   ssl::context ctx;
   tcp::socket sock;
   std::unique_ptr<Stream> s;
 
 public:
-  HTTPS(asio::yield_context &yield, std::string hostname,
-        std::string service = "https")
+  asio::yield_context &yield;
+  boost::beast::flat_buffer read_buffer;
+
+public:
+  HTTPS(asio::yield_context &yield, std::string hostname)
       : ios(cdnalizerd::service()), yield(yield), ctx(ssl::context::tlsv12),
         sock(ios) {
     tcp::resolver dns{ios};
@@ -90,12 +91,12 @@ public:
 };
 
 template <typename Req>
-void setDefaultHeaders(Req& req) {
+void setDefaultHeaders(Req& req, std::string token) {
     req.version = 11;
     req.set(http::field::user_agent, "cdnalizerd v0.2");
     req.set(http::field::content_type, "application/json");
     req.set(http::field::accept, "application/json");
-    req.set("X-Auth-Token", worker.token());
+    req.set("X-Auth-Token", token);
 }
 
 

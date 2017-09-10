@@ -7,9 +7,8 @@
 
 namespace cdnalizerd {
 
-void fillAccountCache(boost::asio::io_service &ios, yield_context &yield,
-                      const Config &config, AccountCache &cache,
-                      std::function<void()> onDone) {
+void fillAccountCache(yield_context &yield, const Config &config,
+                      AccountCache &cache, std::function<void()> onDone) {
   // Make the request outline
   const std::string host("identity.api.rackspacecloud.com");
   http::request<http::string_body> req(http::verb::post, "/v2.0/tokens", 11);

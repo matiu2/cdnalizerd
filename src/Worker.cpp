@@ -6,8 +6,16 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/exception/exception.hpp>
+#include <boost/exception/diagnostic_information.hpp> 
+#include <boost/exception_ptr.hpp>
 
 namespace cdnalizerd {
+
+namespace err {
+
+using jobName = boost::error_info<struct JobName, std::string>;
+  
+} /* err  */ 
 
 // Removes workers from our list when we're done with them
 struct OnDoneSentry {
@@ -32,12 +40,11 @@ void doWork(Worker &worker, asio::yield_context yield) {
     Job job = std::move(worker.getNextJob());
     LOG_S(INFO) << "Running job: " << job.id << " " << job.name << std::endl;
     try {
-      job.go(conn);
+      job.go(conn, worker.token());
       LOG_S(INFO) << "Finished job: " << job.id << " " << job.name << std::endl;
     } catch (boost::exception &e) {
-      LOG_S(ERROR) << "Errored job (boost exception): " << job.id << " "
-                   << job.name << boost::diagnostic_information(e, true)
-                   << std::endl;
+      e << err::jobName(job.name);
+      LOG_S(ERROR) << "Job failed: " << boost::diagnostic_information(e, true);
     } catch (std::exception &e) {
       LOG_S(ERROR) << "Errored job (std::exception): " << job.id << " "
                    << job.name << ": " << boost::diagnostic_information(e, true)
