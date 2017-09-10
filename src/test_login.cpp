@@ -1,12 +1,10 @@
 #include <iostream>
-#include <sstream>
 #include <stdexcept>
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/asio/spawn.hpp>
 #include <boost/beast.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
+#include <json.hpp>
 
 #define LOGURU_IMPLEMENTATION 1
 #include <loguru.hpp>
@@ -19,7 +17,6 @@ using tcp = boost::asio::ip::tcp;
 namespace beast = boost::beast;
 namespace ssl = boost::asio::ssl;
 namespace http = boost::beast::http;
-namespace pt = boost::property_tree;
 
 std::pair<std::string, std::string> getCredentials() {
   // Get user's home directory
@@ -33,7 +30,6 @@ std::pair<std::string, std::string> getCredentials() {
 }
 
 int testLogin(boost::asio::yield_context yield, asio::io_service& ios) {
-  std::stringstream output;
   auto creds = getCredentials();
   int result = 0;
 
@@ -46,23 +42,21 @@ int testLogin(boost::asio::yield_context yield, asio::io_service& ios) {
   cdnalizerd::HTTPS https(yield, host);
   
   // Make the request body
-  boost::property_tree::ptree out;
-  out.put("auth.RAX-KSKEY:apiKeyCredentials.username", creds.first);
-  out.put("auth.RAX-KSKEY:apiKeyCredentials.apiKey", creds.second);
-  std::stringstream tmp; 
-  pt::write_json(tmp, out);
-   
+  nlohmann::json json{
+      {"auth",
+       {{"RAX-KSKEY:apiKeyCredentials",
+         {{"username", creds.first}, {"apiKey", creds.second}}}}}};
+
   // Make the request
-  http::request<http::string_body> req(
-      http::verb::post, "/v2.0/tokens", 11);
+  http::request<http::string_body> req(http::verb::post, "/v2.0/tokens", 11);
   req.set(http::field::host, host);
   req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
   req.set(http::field::content_type, "application/json");
   req.set(http::field::accept, "application/json");
-  req.set(http::field::content_length, tmp.str().size());
-  req.body = tmp.str();
+  req.body = json.dump();
+  req.set(http::field::content_length, req.body.length());
 
-  LOG_S(1) << "Sending Request: " << req;
+  DLOG_S(9) << "Sending Request: " << req;
   try {
     http::async_write(https.stream(), req, yield);
   } catch (boost::system::system_error& e) {
@@ -89,10 +83,8 @@ int testLogin(boost::asio::yield_context yield, asio::io_service& ios) {
     throw std::runtime_error("Bad http response code");
   }
 
-  pt::ptree data;
-  std::stringstream in(res.body.data()); 
-  pt::read_json(in, data);
-  std::string token = data.get<std::string>("access.token.id");
+  nlohmann::json j(nlohmann::json::parse(res.body.data()));
+  std::string token = j["access"]["token"]["id"];
   LOG_S(INFO) << "Got token: " << token;
 
   return result;
