@@ -1,5 +1,7 @@
 #include "config_writer.hpp"
 
+#include "../exception_tags.hpp"
+
 #include <fstream>
 
 #include <boost/property_tree/ptree.hpp>
@@ -38,13 +40,20 @@ void writeEntry(std::string filename) {
   else if (iends_with(filename, ".xml"))
     boost::property_tree::write_xml(out, pt, true);
   else
-    throw std::runtime_error("Unsupported filename extension for writing config. Must be .xml, .ini, .json, or .info");
+    BOOST_THROW_EXCEPTION(
+        boost::enable_error_info(std::runtime_error(
+            "Unsupported filename extension for writing config. "
+            "Must be .xml, .ini, .json, or .info"))
+        << err::source(filename) << err::action("Loading config file"));
 }
 
 void write_sample_config(const std::string &filename) {
   fs::path path(filename);
   if (fs::exists(path))
-    throw std::runtime_error("I will not write sample config file to existing path: "s + path.native());
+    BOOST_THROW_EXCEPTION(
+        boost::enable_error_info(std::runtime_error(
+            "I will not write sample config file to existing"))
+        << err::source(path.native()) << err::action("Writing config file"));
   writeEntry(path.native());
 }
   

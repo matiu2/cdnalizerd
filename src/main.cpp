@@ -11,6 +11,7 @@
 #include "processes/login.hpp"
 #include "logging.hpp"
 #include "https.hpp"
+#include "exception_tags.hpp"
 
 #include <boost/program_options.hpp>
 #include <boost/log/trivial.hpp>
@@ -79,7 +80,18 @@ int main(int argc, char **argv) {
       asio::spawn(ios, [&config](yield_context yield) {
         cdnalizerd::processes::watchForFileChanges(std::move(yield), config);
       });
-    ios.run();
+    try {
+      ios.run();
+    } catch (boost::exception &e) {
+      LOG_S(ERROR) << "Uncaught exception: " << boost::diagnostic_information(e, true);
+    } catch (std::exception &e) {
+      LOG_S(ERROR) << "Uncaught exception (std::exception): "
+                   << boost::diagnostic_information(e, true) << std::endl;
+    } catch (...) {
+      LOG_S(ERROR) << "Uncaught exception (unkown exception): "
+                   << boost::current_exception_diagnostic_information(true)
+                   << std::endl;
+    }
     return 0;
   } else {
     using namespace std;

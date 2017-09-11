@@ -17,10 +17,6 @@ void fillAccountCache(yield_context &yield, const Config &config,
   req.set(http::field::content_type, "application/json");
   req.set(http::field::accept, "application/json");
   
-  // Make a property tree for the requset body
-  pt::ptree out;
-  std::stringstream tmp; 
-
   // This buffer is used for reading and must be persisted
   beast::flat_buffer buffer;
 
@@ -28,12 +24,12 @@ void fillAccountCache(yield_context &yield, const Config &config,
   HTTPS conn(yield, host);
   for (const ConfigEntry &configEntry : config.entries()) {
     // Write the json for the request body
-    out.put("auth.RAX-KSKEY:apiKeyCredentials.username", configEntry.username);
-    out.put("auth.RAX-KSKEY:apiKeyCredentials.apiKey", configEntry.apikey);
-    tmp.str("");
-    pt::write_json(tmp, out);
-    req.set(http::field::content_length, tmp.str().size());
-    req.body = tmp.str();
+    nlohmann::json json{{"auth",
+                         {{"RAX-KSKEY:apiKeyCredentials",
+                           {{"username", *configEntry.username},
+                            {"apiKey", *configEntry.apikey}}}}}};
+    req.body = json.dump();
+    req.set(http::field::content_length, req.body.size());
     // Make the request
     DLOG_S(1) << "Sending Request: " << req;
     try {
@@ -51,12 +47,9 @@ void fillAccountCache(yield_context &yield, const Config &config,
 
     // Receive the HTTP response
     http::async_read(conn.stream(), buffer, res, yield);
-    pt::ptree data;
-    tmp.str("");
-    pt::read_json(tmp, data);
 
     // Update the RS object
-    Rackspace rs(std::move(data));
+    Rackspace rs(json::parse(res.body));
     cache.emplace(configEntry.username, std::move(rs));
 
     onDone();

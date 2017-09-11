@@ -7,6 +7,9 @@
 #include <json.hpp>
 
 #include <boost/algorithm/string/split.hpp>
+#include <boost/exception/exception.hpp>
+#include <boost/exception/diagnostic_information.hpp> 
+#include <boost/exception_ptr.hpp>
 
 namespace cdnalizerd {
 
@@ -20,7 +23,7 @@ void genericDoListContainer(
   URL baseURL(rackspace.getURL(*entry.region, entry.snet));
   LOG_S(INFO) << "Connecting to " << baseURL.host_part() << std::endl;
 
-  HTTPS conn(yield, baseURL.host_part());
+  HTTPS conn(yield, baseURL.hostname);
   http::request<http::empty_body> req;
       req.set(http::field::user_agent, "cdnalizerd v0.2");
       req.set(http::field::accept, "application/json");
@@ -99,7 +102,7 @@ void JSONDoListContainer(JSONListContainerOut &out, yield_context &yield,
         size_t count = entries.size();
         if (count == 0)
           return count;
-        const auto& last(entries.back());
+        const auto &last(entries.back());
         marker = last.at("name");
         out(std::move(entries));
         return count;
@@ -112,33 +115,57 @@ namespace processes {
 /// Prints out the contents of all containers
 void listContainers(yield_context yield, const AccountCache &accounts,
                     const Config &config) {
-  using namespace std;
-  for (const ConfigEntry &entry : config.entries()) {
-    cout << "========\n"
-         << "Username: " << *entry.username << '\n'
-         << "Container: " << *entry.container << "\n\n";
-    const Rackspace &rs(accounts.at(entry.username));
-    for (std::vector<std::string> files : listContainer(yield, rs, entry)) {
-      for (const std::string &filename : files)
-        cout << filename << '\n';
+  try {
+    using namespace std;
+    for (const ConfigEntry &entry : config.entries()) {
+      cout << "========\n"
+           << "Username: " << *entry.username << '\n'
+           << "Container: " << *entry.container << "\n\n";
+      const Rackspace &rs(accounts.at(entry.username));
+      for (std::vector<std::string> files : listContainer(yield, rs, entry)) {
+        for (const std::string &filename : files)
+          cout << filename << '\n';
+      }
     }
+  } catch (boost::exception &e) {
+    LOG_S(ERROR) << "listContainers failed: "
+                 << boost::diagnostic_information(e, true);
+  } catch (std::exception &e) {
+    LOG_S(ERROR) << "listContainers failed (std::exception): "
+                 << ": " << boost::diagnostic_information(e, true) << std::endl;
+  } catch (...) {
+    LOG_S(ERROR) << "listContainers failed (unkown exception): "
+                 << boost::current_exception_diagnostic_information(true)
+                 << std::endl;
   }
 }
 
 /// Prints out the contents of all containers
 void JSONListContainers(yield_context yield, const AccountCache &accounts,
                         const Config &config) {
-  using namespace std;
-  for (const ConfigEntry &entry : config.entries()) {
-    cout << "========\n"
-         << "Username: " << *entry.username << '\n'
-         << "Container: " << *entry.container << "\n\n";
-    for (auto files :
-         JSONListContainer(yield, accounts.at(entry.username), entry, false))
-      for (const auto &data : files)
-        cout << data.at("name") << " - " << data.at("hash") << " - "
-             << data.at("last_modified") << " - " << data.at("content_type")
-             << " - " << data.at("bytes") << '\n';
+  try {
+    using namespace std;
+    for (const ConfigEntry &entry : config.entries()) {
+      cout << "========\n"
+           << "Username: " << *entry.username << '\n'
+           << "Container: " << *entry.container << "\n\n";
+      for (auto files :
+           JSONListContainer(yield, accounts.at(entry.username), entry, false))
+        for (const auto &data : files)
+          cout << data.at("name") << " - " << data.at("hash") << " - "
+               << data.at("last_modified") << " - " << data.at("content_type")
+               << " - " << data.at("bytes") << '\n';
+    }
+  } catch (boost::exception &e) {
+    LOG_S(ERROR) << "JSONListContainers failed: "
+                 << boost::diagnostic_information(e, true);
+  } catch (std::exception &e) {
+    LOG_S(ERROR) << "JSONListContainers failed (std::exception): "
+                 << ": " << boost::diagnostic_information(e, true) << std::endl;
+  } catch (...) {
+    LOG_S(ERROR) << "JSONListContainers failed (unkown exception): "
+                 << boost::current_exception_diagnostic_information(true)
+                 << std::endl;
   }
 }
 

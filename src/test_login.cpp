@@ -5,6 +5,7 @@
 #include <boost/asio/spawn.hpp>
 #include <boost/beast.hpp>
 #include <json.hpp>
+#include <boost/exception/exception.hpp>
 
 #define LOGURU_IMPLEMENTATION 1
 #include <loguru.hpp>
@@ -23,9 +24,9 @@ std::pair<std::string, std::string> getCredentials() {
   char *username = std::getenv("OS_USERNAME");
   char *password = std::getenv("OS_PASSWORD");
   if ((username == nullptr) || (password == nullptr))
-    throw std::runtime_error("Unable to login, please add the environment "
-                             "varables. "
-                             "eg.\nOS_USERNAME=abc\nOS_PASSWORD=5320203405430");
+    BOOST_THROW_EXCEPTION(boost::enable_error_info(std::runtime_error(
+        "Unable to login, please add the environment varables. "
+        "eg.\nOS_USERNAME=abc\nOS_PASSWORD=5320203405430")));
   return std::make_pair(username, password);
 }
 
@@ -80,7 +81,8 @@ int testLogin(boost::asio::yield_context yield, asio::io_service& ios) {
   http::async_read(https.stream(), buffer, res, yield);
   if (res.result() != http::status::ok) {
     LOG_S(ERROR) << "Invalid response code: " << res.result() << " body:\n" << res;
-    throw std::runtime_error("Bad http response code");
+    BOOST_THROW_EXCEPTION(
+        boost::enable_error_info(std::runtime_error("Bad http response code")));
   }
 
   nlohmann::json j(nlohmann::json::parse(res.body.data()));

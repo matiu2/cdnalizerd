@@ -1,5 +1,7 @@
 #include "url.hpp"
 
+#include "exception_tags.hpp"
+
 #include <boost/spirit/home/x3.hpp>
 #include <sstream>
 #include <boost/range/iterator_range.hpp>
@@ -35,10 +37,9 @@ void assignURL(URL& destination, const std::string& url) {
   bool ok = phrase_parse(i, end, url_parser::protocol, url_parser::spacer,
                          destination.protocol);
   if (!ok) {
-    std::stringstream msg;
-    msg << "Couldn't read protocol at position " << distance()
-        << " in url: " << url;
-    throw std::runtime_error(msg.str());
+    BOOST_THROW_EXCEPTION(
+        boost::enable_error_info(std::runtime_error("Unable to parse protocol"))
+        << err::action("Reading URL") << err::source(url) << err::position(0));
   }
   // Parse the username and password
   auto user_pass = boost::fusion::vector_tie(destination.username, destination.password);
@@ -55,10 +56,10 @@ void assignURL(URL& destination, const std::string& url) {
   ok = phrase_parse(i, end, url_parser::hostname, url_parser::spacer,
                     destination.hostname);
   if (!ok) {
-    std::stringstream msg;
-    msg << "Couldn't read protocol at position " << distance()
-        << " in url: " << url;
-    throw std::runtime_error(msg.str());
+    BOOST_THROW_EXCEPTION(
+        boost::enable_error_info(std::runtime_error("Unable to parse hostname"))
+        << err::action("Reading URL") << err::source(url)
+        << err::position(distance()));
   }
   // Parse the port
   ok = phrase_parse(i, end, url_parser::port, url_parser::spacer,
@@ -78,18 +79,18 @@ void assignURL(URL& destination, const std::string& url) {
       // Get each key
       ok = phrase_parse(i, end, url_parser::key, url_parser::spacer, key);
       if (!ok) {
-        std::stringstream msg;
-        msg << "Unable to understand get paramater name at " << distance()
-            << " for url: " << url;
-        throw std::runtime_error(msg.str());
+        BOOST_THROW_EXCEPTION(boost::enable_error_info(std::runtime_error(
+                                  "Unable to understand get paramater name"))
+                              << err::action("Reading URL") << err::source(url)
+                              << err::position(distance()));
       }
       // .. and each param
       ok = phrase_parse(i, end, url_parser::val, url_parser::spacer, val);
       if (!ok) {
-        std::stringstream msg;
-        msg << "Unable to understand get paramater value at " << distance()
-            << " for url: " << url;
-        throw std::runtime_error(msg.str());
+        BOOST_THROW_EXCEPTION(boost::enable_error_info(std::runtime_error(
+                                  "Unable to understand get paramater value"))
+                              << err::action("Reading URL") << err::source(url)
+                              << err::position(distance()));
       }
       // Now save them
       destination.params.insert(std::make_pair(key, val));
@@ -98,10 +99,10 @@ void assignURL(URL& destination, const std::string& url) {
 
   // Make sure we parsed it all
   if (i != end) {
-    std::stringstream msg;
-    msg << "Couldn't parse the entire URL string. Stopped at " << distance()
-        << ". URL: " << url;
-    throw std::runtime_error(msg.str());
+    BOOST_THROW_EXCEPTION(boost::enable_error_info(std::runtime_error(
+                              "Found more URL than expected"))
+                          << err::action("Reading URL") << err::source(url)
+                          << err::position(distance()));
   }
 
 }
