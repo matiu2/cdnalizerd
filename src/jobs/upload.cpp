@@ -72,24 +72,55 @@ void upload(const fs::path &source, const URL &dest, HTTPS &conn,
           boost::enable_error_info(boost::system::system_error(ec))
           << err::action("Openning file"));
     }
+    req.set(http::field::content_length, req.body.size());
     DLOG_S(9) << "HTTP Request: " << req.base();
     http::async_write(conn.stream(), req, conn.yield);
     // Make sure it's OK
     http::response<http::empty_body> response;
     http::async_read(conn.stream(), conn.read_buffer, response, conn.yield);
     DLOG_S(9) << "HTTP Response: " << response;
-    if (response.result() != http::status::ok) {
+    switch (response.result()) {
+    case http::status::accepted: {
+      LOG_S(0) << "Upload has been accepted for processing by the server";
+      break;
+    }
+    case http::status::created: {
+      LOG_S(0) << "Upload Successful";
+      break;
+    }
+    case http::status::unauthorized: {
+      // TODO: Maybe re-authorize and try again
+      LOG_S(ERROR) << "Upload Failed - Unauthorized";
+      break;
+    }
+    case http::status::length_required: {
+      LOG_S(ERROR) << "Upload Failed - Length required";
+      break;
+    }
+    case http::status::unprocessable_entity: {
+      LOG_S(ERROR) << "Upload Failed - Un processable entity";
+      break;
+    }
+    default:
       BOOST_THROW_EXCEPTION(
           boost::enable_error_info(std::runtime_error("HTTP Bad Response"))
           << err::http_status(response.result()));
-    }
+    };
+  } catch (boost::system::system_error &e) {
+    auto e2 = boost::enable_error_info(e) << err::source(source.native())
+                                          << err::destination(dest.whole());
+    LOG_S(ERROR) << "System error: " << e.code().value() << " - "
+                 << e.code().message() << " - " << e.code().category().name()
+                 << " - " << boost::diagnostic_information_what(e2, true);
   } catch (boost::exception &e) {
     e << err::action("Uploading") << err::source(source.native())
       << err::destination(dest.whole());
-    throw;
+    LOG_S(ERROR) << boost::diagnostic_information_what(e, true);
   } catch (std::exception &e) {
-    throw boost::enable_error_info(e) << err::source(source.native())
-                                      << err::destination(dest.whole());
+    auto e2 = boost::enable_error_info(e) << err::source(source.native())
+                                          << err::destination(dest.whole());
+    LOG_S(ERROR) << e.what() << " - "
+                 << boost::diagnostic_information_what(e2, true);
   }
 };
 
@@ -110,14 +141,15 @@ Job makeConditionalUploadJob(fs::path source, URL dest) {
       DLOG_S(5) << "Getting MD5 of local file: " << source.native();
       std::string md5;
       md5 = md5_from_file(source);
-      // Get the MD5 of the remote file
-      DLOG_S(5) << "Requesting URL: " << dest.whole() << std::endl;
       // Get the MD5 of the existing file
-      http::request<http::empty_body> req;
+      http::request<http::string_body> req{http::verb::head, dest.path, 11};
+      req.set(http::field::host, dest.host_part());
       req.set(http::field::user_agent, "cdnalizerd v0.2");
       req.set(http::field::accept, "application/json");
+      req.set(http::field::content_length, "0");
       req.set("X-Auth-Token", token);
       req.method(http::verb::head);
+      DLOG_S(9) << "HTTP Request: " << req;
       http::async_write(conn.stream(), req, conn.yield);
       // Get the response
       http::response<http::empty_body> response;
@@ -138,9 +170,10 @@ Job makeConditionalUploadJob(fs::path source, URL dest) {
       }
     } catch (std::exception &e) {
       using namespace std;
-      LOG_S(ERROR) << "std::exception trying to conditionally upload "
+      LOG_S(ERROR) << e.what()
+                   << " - std::exception trying to conditionally upload "
                    << source.native() << " to " << dest.whole() << ": "
-                   << e.what() << std::endl;
+                   << std::endl;
     } catch (boost::exception &e) {
       LOG_S(ERROR) << "Unable to conditionally upload " << source.native()
                    << " to " << dest.whole() << ": "

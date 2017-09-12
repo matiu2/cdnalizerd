@@ -6,6 +6,7 @@
 #include <boost/beast.hpp>
 
 #include "logging.hpp"
+#include "exception_tags.hpp"
 
 namespace cdnalizerd {
 
@@ -28,6 +29,7 @@ private:
   ssl::context ctx;
   tcp::socket sock;
   std::unique_ptr<Stream> s;
+  std::string hostname;
 
 public:
   asio::yield_context &yield;
@@ -36,7 +38,7 @@ public:
 public:
   HTTPS(asio::yield_context &yield, std::string hostname)
       : ios(cdnalizerd::service()), yield(yield), ctx(ssl::context::tlsv12),
-        sock(ios) {
+        sock(ios), hostname(hostname) {
     tcp::resolver dns{ios};
     ctx.set_default_verify_paths();
     auto const lookup = dns.async_resolve({hostname, "https"}, yield);
@@ -81,8 +83,10 @@ public:
         ec.value() == boost::system::errc::success) {
       return;
     }
-    // Something scary happened, log an error (throw an exception too)
-    LOG_S(FATAL) << "Unable to close down SSL connection";
+    // Something scary happened, throw an exception
+    BOOST_THROW_EXCEPTION(
+        boost::enable_error_info(boost::system::system_error(ec))
+        << err::action("Shutting down HTTPS") << err::source(hostname));
   }
   Stream &stream() {
     assert(s);

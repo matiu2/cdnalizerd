@@ -51,16 +51,26 @@ void genericDoListContainer(
     http::response<http::string_body> response;
     http::async_read(conn.stream(), conn.read_buffer, response, conn.yield);
     DLOG_S(9) << "HTTP Response: " << response;
-    if (response.result() != http::status::ok) {
-      BOOST_THROW_EXCEPTION(
-          boost::enable_error_info(std::runtime_error("HTTP Bad Response"))
-          << err::http_status(response.result()));
-    }
-
-    LOG_S(5) << "Downloaded info on "
-             << response["X-container-Object-Count"] << " objects"
-             << std::endl;
-    size_t count = out(response.body, marker);
+    size_t count(0);
+    switch (response.result()) {
+      case http::status::no_content: {
+        LOG_S(5) << "No files in container: "
+                 << response["X-container-Object-Count"] << " objects"
+                 << std::endl;
+        break;
+      } 
+      case http::status::ok: {
+        LOG_S(5) << "Downloaded info on "
+                 << response["X-container-Object-Count"] << " objects"
+                 << std::endl;
+        count = out(response.body, marker);
+      }
+      default:
+        BOOST_THROW_EXCEPTION(
+            boost::enable_error_info(std::runtime_error(
+                "Invalid Response when trying to list container"))
+            << err::http_status(response.result()));
+    };
     // If we didn't get 'limit' results, we're done
     assert(count <= limit);
     if (count != limit)
@@ -118,9 +128,8 @@ void listContainers(yield_context yield, const AccountCache &accounts,
   try {
     using namespace std;
     for (const ConfigEntry &entry : config.entries()) {
-      cout << "========\n"
-           << "Username: " << *entry.username << '\n'
-           << "Container: " << *entry.container << "\n\n";
+      LOG_S(5) << "Listing Config entry: " << *entry.username << " - "
+               << *entry.container;
       const Rackspace &rs(accounts.at(entry.username));
       for (std::vector<std::string> files : listContainer(yield, rs, entry)) {
         for (const std::string &filename : files)

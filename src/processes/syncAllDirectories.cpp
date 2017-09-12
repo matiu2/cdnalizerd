@@ -27,7 +27,7 @@ void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
            << config.region << " - " << (config.snet ? "snet" : "no snet")
            << std::endl;
   URL baseURL(rs.getURL(*config.region, config.snet));
-  HTTPS conn(yield, baseURL.host_part());
+  HTTPS conn(yield, baseURL.hostname);
   // Get iterators to our local files
   std::vector<fs::path> localFiles(
       fs::recursive_directory_iterator(config.local_dir),
