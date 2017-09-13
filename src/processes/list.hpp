@@ -3,6 +3,7 @@
 #include "../AccountCache.hpp"
 #include "../config_reader/config.hpp"
 
+#include <json.hpp>
 #include <boost/algorithm/string/find.hpp>
 #include <boost/coroutine2/coroutine.hpp>
 
@@ -11,6 +12,7 @@
 namespace cdnalizerd {
 
 using namespace std::literals::string_literals;
+using nlohmann::json;
 
 struct ContainerEntry {
   const std::string& username;
@@ -22,7 +24,7 @@ using ListContainerCoroutine = boost::coroutines::coroutine<std::vector<std::str
 using ListContainerResult = ListContainerCoroutine::pull_type;
 using ListContainerOut = ListContainerCoroutine::push_type;
 
-using JSONListContainerCoroutine = boost::coroutines::coroutine<json::JList>;
+using JSONListContainerCoroutine = boost::coroutines::coroutine<json>;
 using JSONListContainerResult = JSONListContainerCoroutine::pull_type;
 using JSONListContainerOut = JSONListContainerCoroutine::push_type;
 

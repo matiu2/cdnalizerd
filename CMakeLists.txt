@@ -12,7 +12,6 @@ include(cmake/dependencies.cmake)
 message("Threading Library: ${CMAKE_THREAD_LIBS_INIT}")
 
 set(ALL_LIBS
-    ${RESTClient} 
     ${Boost_COROUTINE_LIBRARY} 
     ${Boost_CONTEXT_LIBRARY} 
     ${Boost_IOSTREAMS_LIBRARY} 

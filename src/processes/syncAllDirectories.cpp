@@ -14,14 +14,10 @@
 #include <set>
 #include <iostream>
 
-#include <RESTClient/http/interface.hpp>
 #include <boost/asio/deadline_timer.hpp>
 
 namespace cdnalizerd {
 namespace processes {
-
-using RESTClient::http::yield_context;
-using RESTClient::http::URL;
 
 namespace fs = boost::filesystem;
 
@@ -31,7 +27,7 @@ void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
            << config.region << " - " << (config.snet ? "snet" : "no snet")
            << std::endl;
   URL baseURL(rs.getURL(*config.region, config.snet));
-  RESTClient::REST conn(yield, baseURL.host_part());
+  HTTPS conn(yield, baseURL.hostname);
   // Get iterators to our local files
   std::vector<fs::path> localFiles(
       fs::recursive_directory_iterator(config.local_dir),
@@ -62,7 +58,7 @@ void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
   auto local_end = localFiles.end();
   // Get files only in the remote path/prefix that we care about from the config
   auto remoteChunks  = JSONListContainer(yield, rs, config, true);
-  for (const json::JList &remoteList : remoteChunks) {
+  for (const auto &remoteList : remoteChunks) {
     auto remote_iterator = remoteList.begin();
     auto remote_end = remoteList.end();
     while ((local_iterator != local_end) && (remote_iterator != remote_end)) {
@@ -88,7 +84,7 @@ void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
         // remoteEntry.at("last_modified') and "bytes" (for the size)
         ptime localTime(
             from_time_t(fs::last_write_time(*local_iterator)));
-        std::string remote_raw(remote_iterator->at("last_modified"));
+        std::string remote_raw = (*remote_iterator)["last_modified"];
         remote_raw[remote_raw.find('T')] = ' ';
         ptime remoteTime(time_from_string(remote_raw));
         if (localTime > remoteTime)
@@ -144,14 +140,14 @@ void syncAllDirectories(yield_context &yield, const AccountCache &accounts,
                         const Config &config, WorkerManager& workers) {
   // Sync all the entries in parallel, and block the main thread with a timer
   // until they're all done
-  boost::asio::deadline_timer waitForSync(*RESTClient::tcpip::getService(),
+  boost::asio::deadline_timer waitForSync(service(),
                                           boost::posix_time::minutes(10));
   size_t syncWorkers(0);
   for (const ConfigEntry &entry : config.entries()) {
     // Make a list of file information
-    RESTClient::http::spawn([
-          &rs = accounts.at(entry.username), &entry, &workers, &syncWorkers,
-          &waitForSync
+    asio::spawn(service(), [
+                               &rs = accounts.at(entry.username), &entry,
+                               &workers, &syncWorkers, &waitForSync
     ](yield_context y) {
       LOG_S(5) << "Syncing config: " << entry.username << std::endl;
       CountSentry sentry(syncWorkers, waitForSync);

@@ -3,13 +3,16 @@
 #include <queue>
 #include <memory>
 #include <functional>
+#include <boost/asio.hpp>
 
 #include "Rackspace.hpp"
 #include "Job.hpp"
+#include "url.hpp"
 
 namespace cdnalizerd {
 
 enum WorkerState { Raw, Ready, Working, Idle, Dead };
+namespace asio = boost::asio;
 
 class StateSentry {
 private:

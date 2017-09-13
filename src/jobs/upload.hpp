@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Job.hpp"
+#include "../url.hpp"
 #include <boost/exception/exception.hpp>
 #include <boost/exception/errinfo_errno.hpp>
 #include <string>

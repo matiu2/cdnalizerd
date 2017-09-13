@@ -5,8 +5,6 @@
 #include "Rackspace.hpp"
 #include "config_reader/config.hpp"
 
-#include <jsonpp11/parse_to_json_class.hpp>
-
 #include <functional>
 
 namespace cdnalizerd {

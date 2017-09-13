@@ -1,28 +1,25 @@
 #pragma once
 
 #include "logging.hpp"
+#include "https.hpp"
 
 #include <functional>
 #include <iostream>
 #include <ostream>
 
-#include <RESTClient/rest.hpp>
 #include <boost/filesystem.hpp>
-#include <RESTClient/http/url.hpp>
 
 namespace cdnalizerd {
 
 // These are here to give consistent naming for all users of the header
 namespace fs = boost::filesystem;
-using RESTClient::REST;
-using RESTClient::http::URL;
 
 struct Job;
 
 inline std::ostream &operator<<(std::ostream &out, const Job& job);
  
 struct Job {
-  using Work = std::function<void(RESTClient::REST&)>;
+  using Work = std::function<void(HTTPS&, const std::string&)>;
   static size_t nextId;
   const size_t id;
   const std::string name;

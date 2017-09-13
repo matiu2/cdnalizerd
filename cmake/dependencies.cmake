@@ -50,42 +50,54 @@ ExternalProject_Add(hana
 SET(HANA_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/hana/include)
 INCLUDE_DIRECTORIES(${HANA_INCLUDE_DIR})
 
-## Bandit (for tests)
-ExternalProject_Add(bandit
+## JSON - Nice json parser
+
+ExternalProject_Add(json
     PREFIX 3rd_party
-    GIT_REPOSITORY https://github.com/joakimkarlsson/bandit.git
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_SHALLOW 1
     TLS_VERIFY true
     TLS_CAINFO certs/DigiCertHighAssuranceEVRootCA.crt
+    CONFIGURE_COMMAND ""
     BUILD_COMMAND ""
     UPDATE_COMMAND "" # Skip annoying updates for every build
     INSTALL_COMMAND ""
 )
-SET(BANDIT_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/bandit)
+SET(EXTRA_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/json/src)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/json/src)
 
-## RESTClient2 - Allows us to talk to Rackspace cloud files et al.
+## Beast - Allows us to talk to Rackspace cloud files et al.
 
-ExternalProject_Add(RESTClient2
+ExternalProject_Add(Beast
     PREFIX 3rd_party
-    GIT_REPOSITORY git@github.com:matiu2/RESTClient2.git
+    GIT_REPOSITORY https://github.com/boostorg/beast.git
     TLS_VERIFY true
+    GIT_SHALLOW 1
     TLS_CAINFO certs/DigiCertHighAssuranceEVRootCA.crt
     TEST_BEFORE_INSTALL 0
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
     TEST_COMMAND ""   # Requires generation of rackspace credentials
     UPDATE_COMMAND "" # Skip annoying updates for every build
     INSTALL_COMMAND ""
 )
-SET(RESTClient2_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/RESTClient2/src)
-find_library(RESTClient RESTClient HINTS ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/RESTClient2-build/src)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/RESTClient2-build/3rd_party/src/loguru)
+SET(BEAST_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/Beast/include")
+INCLUDE_DIRECTORIES(${BEAST_INCLUDE_DIR})
 
-ExternalProject_Add(jsonpp11
-     PREFIX 3rd_party
-     GIT_REPOSITORY https://github.com/matiu2/jsonpp11.git
-     TLS_VERIFY true
-     TLS_CAINFO certs/DigiCertHighAssuranceEVRootCA.crt
-     TEST_BEFORE_INSTALL 0
-     TEST_COMMAND ""   # Test command requires rackspace cloud authentication to work
-     UPDATE_COMMAND "" # Skip annoying updates for every build
-     INSTALL_COMMAND ""
- )
-SET(JSONPP11_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/jsonpp11/src)
+## Loguru - logging library
+
+ExternalProject_Add(Loguru
+    PREFIX 3rd_party
+    GIT_REPOSITORY https://github.com/emilk/loguru.git
+    TLS_VERIFY true
+    GIT_SHALLOW 1
+    TLS_CAINFO certs/DigiCertHighAssuranceEVRootCA.crt
+    TEST_BEFORE_INSTALL 0
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    TEST_COMMAND ""   # Requires generation of rackspace credentials
+    UPDATE_COMMAND "" # Skip annoying updates for every build
+    INSTALL_COMMAND ""
+)
+SET(LOGURU_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/Loguru")
+INCLUDE_DIRECTORIES(${LOGURU_INCLUDE_DIR})
