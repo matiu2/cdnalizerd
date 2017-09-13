@@ -24,11 +24,10 @@ void genericDoListContainer(
   LOG_S(INFO) << "Connecting to " << baseURL.host_part() << std::endl;
 
   HTTPS conn(yield, baseURL.hostname);
-  http::request<http::empty_body> req;
+  http::request<http::empty_body> req{http::verb::get, baseURL.path_part() + "/" + *entry.container , 11};
       req.set(http::field::user_agent, "cdnalizerd v0.2");
       req.set(http::field::accept, "application/json");
       req.set("X-Auth-Token", rackspace.token());
-      req.method(http::verb::head);
 
   const size_t limit = 10000;
   std::string marker;
@@ -45,25 +44,34 @@ void genericDoListContainer(
       path += "&prefix=" + prefix;
     if (!extra_params.empty())
       path.append(extra_params);
-    LOG_S(5) << "Requesting " << baseURL.host_part() + path << std::endl;
     req.target(path);
+    LOG_S(5) << "HTTP Request: " << req;
     http::async_write(conn.stream(), req, yield);
     http::response<http::string_body> response;
     http::async_read(conn.stream(), conn.read_buffer, response, conn.yield);
     DLOG_S(9) << "HTTP Response: " << response;
     size_t count(0);
     switch (response.result()) {
+      case http::status::ok: {
+        LOG_S(5) << "Downloaded info on "
+                 << response["X-container-Object-Count"] << " objects"
+                 << std::endl;
+        count = out(response.body, marker);
+      }
       case http::status::no_content: {
         LOG_S(5) << "No files in container: "
                  << response["X-container-Object-Count"] << " objects"
                  << std::endl;
         break;
       } 
-      case http::status::ok: {
-        LOG_S(5) << "Downloaded info on "
-                 << response["X-container-Object-Count"] << " objects"
-                 << std::endl;
-        count = out(response.body, marker);
+      case http::status::not_found: {
+        LOG_S(ERROR) << "Path not found on server: "
+                     << baseURL.host_part() + path;
+      }
+      case http::status::conflict: {
+        // TODO: Maybe set a timer and try againg in a minute ?
+        LOG_S(ERROR) << "Server unable to comply - try again later: "
+                     << baseURL.host_part() + path;
       }
       default:
         BOOST_THROW_EXCEPTION(
