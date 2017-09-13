@@ -1,13 +1,15 @@
 #pragma once
 
+#include "Rackspace.hpp"
+#include "Job.hpp"
+
 #include <queue>
 #include <memory>
 #include <functional>
+
 #include <boost/asio.hpp>
 
-#include "Rackspace.hpp"
-#include "Job.hpp"
-#include "url.hpp"
+#include <LUrlParser.h>
 
 namespace cdnalizerd {
 
@@ -29,6 +31,8 @@ public:
   }
   void updateState(WorkerState newState) { state = newState; }
 };
+
+using URL = LUrlParser::clParseURL;
 
 class Worker {
 private:

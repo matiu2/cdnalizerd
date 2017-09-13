@@ -1,13 +1,14 @@
 /// Logs in to rackspace and gives you a token
 #pragma once
 
+#include "logging.hpp"
+
 #include <boost/property_tree/json_parser.hpp>
 #include <map>
 #include <string>
 #include <json.hpp>
 
-#include "logging.hpp"
-#include "url.hpp"
+#include <LUrlParser.h>
 
 namespace cdnalizerd {
 
@@ -15,6 +16,8 @@ using nlohmann::json;
 
 using namespace std::string_literals;
 namespace pt = boost::property_tree;
+
+using URL = LUrlParser::clParseURL;
 
 class Rackspace {
 private:
@@ -43,10 +46,8 @@ public:
     }
     const json& cf(*cloudFiles);
     for (const auto &ep : cf["endpoints"]) {
-      cloudFilesPublicURLs[ep["region"]] =
-          static_cast<const std::string&>(ep["publicURL"]);
-      cloudFilesPrivateURLs[ep["region"]] =
-          static_cast<const std::string&>(ep["internalURL"]);
+      cloudFilesPublicURLs[ep["region"]] = URL::ParseURL(ep["publicURL"]);
+      cloudFilesPrivateURLs[ep["region"]] = URL::ParseURL(ep["internalURL"]);
     }
   }
   const json &loginJSON() const { return data; }

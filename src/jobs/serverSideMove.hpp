@@ -7,7 +7,8 @@ namespace cdnalizerd {
 
 namespace jobs {
 
-Job makeServerSideMove(URL source, URL dest) {
+Job makeServerSideMove(LUrlParser::clParseURL source,
+                       LUrlParser::clParseURL dest) {
   Job::Worker go =
       [ source = std::move(source), dest = std::move(dest) ](REST & conn) {
       if (source.hostname != dest.hostname) {

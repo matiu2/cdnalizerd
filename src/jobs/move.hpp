@@ -8,7 +8,7 @@ namespace cdnalizerd {
 
 namespace jobs {
 
-Job makeMoveJob(fs::path source, URL dest) {
+Job makeMoveJob(fs::path source, LUrlParser::clParseURL dest) {
   Job::Worker go =
       [ source = std::move(source), dest = std::move(dest) ](REST & conn) {
     {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Job.hpp"
-#include "../url.hpp"
+#include <LUrlParser.h>
 #include <boost/exception/exception.hpp>
 #include <boost/exception/errinfo_errno.hpp>
 #include <string>
@@ -16,10 +16,10 @@ using http_body = boost::error_info<struct HTTPBody, std::string>;
 struct UploadError : virtual boost::exception {};
 
 /// Upload a file
-Job makeUploadJob(fs::path source, URL dest);
+Job makeUploadJob(fs::path source, LUrlParser::clParseURL dest);
 
 /// Upload a file, but first compare the MD5 sum
-Job makeConditionalUploadJob(fs::path source, URL dest);
+Job makeConditionalUploadJob(fs::path source, LUrlParser::clParseURL dest);
 
 } /* jobs */ 
 } /* cdnalizerd  */ 

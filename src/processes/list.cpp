@@ -1,15 +1,16 @@
 #include "list.hpp"
 
 #include "../logging.hpp"
-#include "../url.hpp"
 #include "../https.hpp"
 #include "../exception_tags.hpp"
-#include <json.hpp>
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/exception/exception.hpp>
 #include <boost/exception/diagnostic_information.hpp> 
 #include <boost/exception_ptr.hpp>
+
+#include <LUrlParser.h>
+#include <json.hpp>
 
 namespace cdnalizerd {
 
@@ -20,7 +21,7 @@ void genericDoListContainer(
     std::function<size_t(const std::string &, std::string &)> out,
     yield_context &yield, const Rackspace &rackspace, const ConfigEntry &entry,
     bool restrict_to_remote_dir, std::string extra_params = "") {
-  URL baseURL(rackspace.getURL(*entry.region, entry.snet));
+  LUrlParser::clParseURL baseURL(rackspace.getURL(*entry.region, entry.snet));
   LOG_S(INFO) << "Connecting to " << baseURL.host_part() << std::endl;
 
   HTTPS conn(yield, baseURL.hostname);

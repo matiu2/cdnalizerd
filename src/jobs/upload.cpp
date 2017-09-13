@@ -51,8 +51,8 @@ const std::string md5_from_file(const fs::path &path) {
 
 /// Uploads a file.
 /// if md5 is not set, it'll read it from the file
-void upload(const fs::path &source, const URL &dest, HTTPS &conn,
-            const std::string &token, std::string md5 = "") {
+void upload(const fs::path &source, const LUrlParser::clParseURL &dest,
+            HTTPS &conn, const std::string &token, std::string md5 = "") {
   try {
     LOG_SCOPE_F(5, "cdnalizerd::upload");
     LOG_S(INFO) << "Uploading " << source.native() << " to " << dest.whole();
@@ -129,14 +129,14 @@ void upload(const fs::path &source, const URL &dest, HTTPS &conn,
   }
 };
 
-Job makeUploadJob(fs::path source, URL dest) {
+Job makeUploadJob(fs::path source, LUrlParser::clParseURL dest) {
   Job::Work go = [source, dest](HTTPS &conn, const std::string &token) {
     upload(source, dest, conn, token);
   };
   return Job("Upload "s + source.string() + " to " + dest.whole(), go);
 }
 
-Job makeConditionalUploadJob(fs::path source, URL dest) {
+Job makeConditionalUploadJob(fs::path source, LUrlParser::clParseURL dest) {
   Job::Work go = [source, dest](HTTPS &conn, const std::string &token) {
     LOG_SCOPE_F(5, "cdnalizerd::conditionalUpload");
     LOG_S(INFO) << "Conditionally Uploading " << source.native() << " to "

@@ -78,7 +78,7 @@ void watchForFileChanges(yield_context yield, const Config &config) {
             << err::username(*entry.username));
       Rackspace &rs = found->second;
       fs::path localFile(event.path());
-      URL url(rs.getURL(*entry.region, entry.snet));
+      LUrlParser::clParseURL url(rs.getURL(*entry.region, entry.snet));
       auto worker = workers.getWorker(url, rs);
       std::string localRelativePath(
           fs::relative(event.path(), entry.local_dir).string());
