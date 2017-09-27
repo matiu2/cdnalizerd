@@ -156,30 +156,23 @@ struct Event {
 std::ostream &operator<<(std::ostream &out, const Event &e);
 namespace asio = boost::asio;
 
-union RawEvent {
-  char raw[sizeof(inotify_event) + NAME_MAX + 1];
-  inotify_event event;
-};
-
 /// A collection of Watches
 struct Instance {
   yield_context &yield;
   int inotify_handle;
   asio::io_service& ios;
   asio::posix::stream_descriptor stream;
-  boost::asio::mutable_buffers_1 buffer;
+  char buffer[sizeof(inotify_event) + NAME_MAX + 1];
+  char* buffer_data_end = buffer;
 
   // Watch handle to watcher lookup
   std::map<int, Watch> watches;
   // Path to watcher handle lookup
   std::map<std::string, int> paths;
 
-  // Where incoming events are read to
-  RawEvent data;
-
   Instance(yield_context &yield)
       : yield(yield), inotify_handle(inotify_init1(IN_NONBLOCK)),
-        ios(service()), stream(ios), buffer(asio::buffer(data.raw)) {
+        ios(service()), stream(ios) {
     if (inotify_handle == -1)
       throw std::system_error(errno, std::system_category());
     stream.assign(inotify_handle);
@@ -220,22 +213,51 @@ struct Instance {
     return (found != paths.end());
   }
   Event waitForEvent() {
-    // Get one event
-    union EventHolder {
-      inotify_event event;
-      char raw[sizeof(inotify_event) + NAME_MAX + 1];
-    } data;
-    int len = boost::asio::async_read(
-        stream, boost::asio::buffer(data.raw),
-        boost::asio::transfer_at_least(sizeof(inotify_event)), yield);
-    if (len == -1)
-      throw std::system_error(errno, std::system_category());
-    assert(len == sizeof(inotify_event) + data.event.len);
-    return Event([ this, wd = data.event.wd ]()->const Watch & {
-      return watches.at(wd);
-    },
-                 data.event.mask, data.event.cookie, data.event.name,
-                 data.event.len);
+    // First check in the buffer if we have anything left over from last time
+    LOG_SCOPE_F(9, "Event processing");
+    size_t size = std::distance(buffer, buffer_data_end);
+    DLOG_S(9) << "Starting buffer size: " << size;
+    size_t toRead = sizeof(inotify_event);
+    if (size < sizeof(inotify_event)) {
+      // If we don't already have enough data in the buffer, read some more
+      toRead -= size;
+      DLOG_S(9) << "toRead: " << toRead;
+      DLOG_S(9) << "sizeof(inotify_event): " << sizeof(inotify_event);
+      int bytesRead = boost::asio::async_read(
+          stream, asio::buffer(buffer_data_end, sizeof(buffer) - size),
+          boost::asio::transfer_at_least(toRead), yield);
+      DLOG_S(9) << "bytesRead: " << bytesRead;
+      buffer_data_end += bytesRead;
+      size = std::distance(buffer, buffer_data_end);
+      DLOG_S(9) << "New size: " << size;
+    }
+    assert(size >= sizeof(inotify_event));
+    assert(size < sizeof(buffer));
+    inotify_event* event = (inotify_event*)(buffer);
+    DLOG_S(9) << "Raw event: \n"
+              << "wd: " << event->wd << "\nmask: " << event->mask
+              << "\ncookie: " << event->cookie << "\nlen: " << event->len
+              << "\nname: " << event->name << "\n";
+    // Now read the event name
+    Event result(
+        [ this, wd = event->wd ]()->const Watch & { return watches.at(wd); },
+        event->mask, event->cookie, event->name, event->len);
+    // Now clean up our buffer
+    if (size > (sizeof(inotify_event) + event->len)) {
+      // Copy / move the next event data to the beginning
+      DLOG_S(9) << "Readying buffer for next read";
+      size_t start(sizeof(inotify_event) + event->len);
+      DLOG_S(9) << "New data found at: " << start;
+      std::copy(&buffer[start], buffer_data_end, buffer);
+      buffer_data_end -= start;
+    } else {
+      // Buffer is empty
+      DLOG_S(9) << "Buffer is already clean because the buffer is " << size
+                << " bytes, and the event is "
+                << (sizeof(inotify_event) + event->len);
+      buffer_data_end = buffer;
+    }
+    return result;
   }
 };
 }
