@@ -122,19 +122,17 @@ void URL::parse() {
   auto eof = pe;
   auto start = raw.begin();
   int cs;
-  LOG_S(5) << "Parsing URL size: " << raw.size();
-  LOG_S(5) << "Parsing URL: " << raw << " - Size: " << raw.size();
   // init
   
-#line 130 "url_parser.hpp"
+#line 128 "url_parser.hpp"
 	{
 	cs = url_start;
 	}
 
-#line 28 "url_parser.hpp.rl"
+#line 26 "url_parser.hpp.rl"
   // exec
   
-#line 138 "url_parser.hpp"
+#line 136 "url_parser.hpp"
 	{
 	int _klen;
 	unsigned int _trans;
@@ -271,17 +269,16 @@ _match:
 	case 10:
 #line 34 "url_actions.rl"
 	{
-        LOG_S(5) << "Path ended";
         path = std::string(start, p);
     }
 	break;
 	case 11:
-#line 38 "url_actions.rl"
+#line 37 "url_actions.rl"
 	{
         start = p;
     }
 	break;
-#line 285 "url_parser.hpp"
+#line 282 "url_parser.hpp"
 		}
 	}
 
@@ -312,23 +309,22 @@ _again:
 	case 10:
 #line 34 "url_actions.rl"
 	{
-        LOG_S(5) << "Path ended";
         path = std::string(start, p);
     }
 	break;
 	case 11:
-#line 38 "url_actions.rl"
+#line 37 "url_actions.rl"
 	{
         start = p;
     }
 	break;
 	case 12:
-#line 41 "url_actions.rl"
+#line 40 "url_actions.rl"
 	{
         search = std::string(start, p);
     }
 	break;
-#line 332 "url_parser.hpp"
+#line 328 "url_parser.hpp"
 		}
 	}
 	}
@@ -336,15 +332,9 @@ _again:
 	_out: {}
 	}
 
-#line 30 "url_parser.hpp.rl"
+#line 28 "url_parser.hpp.rl"
   // finish
   if (cs < url_first_final) {
-    LOG_S(ERROR) << "current-state: " << cs
-                 << " - ending-state: " << url_first_final
-                 << " - position: " << std::distance(std::begin(raw), p);
-    LOG_S(ERROR) << "Unable to parse URL: " << raw << " current-state: " << cs
-                 << " - ending-state: " << url_first_final
-                 << " - position: " << std::distance(std::begin(raw), p);
     BOOST_THROW_EXCEPTION(
         boost::enable_error_info(std::runtime_error("Unable to parse URL"))
         << err::URL(raw) << err::position(std::distance(std::begin(raw), p)));

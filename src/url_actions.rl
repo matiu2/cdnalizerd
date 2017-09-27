@@ -32,7 +32,6 @@
         start = p;
     }
     action path_end {
-        LOG_S(5) << "Path ended";
         path = std::string(start, p);
     }
     action search_start {

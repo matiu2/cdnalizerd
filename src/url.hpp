@@ -1,10 +1,17 @@
 #pragma once
 
 #include "exception_tags.hpp"
+#include "logging.hpp"
 
 #include <string>
 
 namespace cdnalizerd {
+
+struct UnParsedURL {
+public:
+  std::string raw;
+  UnParsedURL(std::string raw) : raw(raw) {}
+};
 
 struct URL {
 
@@ -15,6 +22,7 @@ private:
 public:
   URL() : raw() {}
   URL(std::string raw) : raw(std::move(raw)) { parse(); }
+  URL(UnParsedURL in) : raw(std::move(in.raw)) { parse(); }
   std::string scheme;
   std::string user;
   std::string password;
@@ -30,16 +38,17 @@ public:
       return scheme + host + ':' + port;
   }
   const std::string &whole() const { return raw; }
-  URL& operator/(std::string s) {
-    bool urlEndsWithSlash = (!raw.empty()) && (raw.back() == '/');
-    bool pathStartsWithSlash = (!path.empty()) && (path.front() == '/');
-    if (urlEndsWithSlash && pathStartsWithSlash)
-      return raw.substr(0, raw.size() - 1) + path;
-    else if (urlEndsWithSlash || pathStartsWithSlash)
-      return raw + path;
-    else
-      return raw + '/' + path;
-  }
 };
+
+UnParsedURL joinStrings(const std::string& a, const std::string& b);
+
+inline UnParsedURL operator/(const UnParsedURL &url, std::string s) {
+  return joinStrings(url.raw, s);
+}
+
+inline UnParsedURL operator/(const URL &url, std::string s) {
+  return joinStrings(url.whole(), s);
+}
+
 
 } /* cdnalizerd  */ 

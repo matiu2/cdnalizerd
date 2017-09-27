@@ -94,7 +94,13 @@ struct Event {
         const char *namePtr, int nameLen)
       : watch(watch), mask(mask), cookie(cookie) {
     name.reserve(nameLen);
-    std::copy(namePtr, &namePtr[nameLen], std::back_inserter(name));
+    DLOG_S(9) << "Making event - namePtr: " << namePtr << " - len: " << nameLen;
+    auto out = std::back_inserter(name);
+    while ((*namePtr != '\0') && (namePtr < namePtr + nameLen)) {
+      *out = *namePtr;
+      ++namePtr;
+      ++out;
+    }
   }
 
   std::string path() const {
@@ -216,14 +222,15 @@ struct Instance {
   Event waitForEvent() {
     // Get one event
     union EventHolder {
-      char raw[sizeof(inotify_event) + NAME_MAX + 1];
       inotify_event event;
+      char raw[sizeof(inotify_event) + NAME_MAX + 1];
     } data;
     int len = boost::asio::async_read(
         stream, boost::asio::buffer(data.raw),
         boost::asio::transfer_at_least(sizeof(inotify_event)), yield);
     if (len == -1)
       throw std::system_error(errno, std::system_category());
+    assert(len == sizeof(inotify_event) + data.event.len);
     return Event([ this, wd = data.event.wd ]()->const Watch & {
       return watches.at(wd);
     },
