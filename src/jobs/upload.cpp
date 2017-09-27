@@ -149,18 +149,19 @@ Job makeConditionalUploadJob(fs::path source, URL dest) {
       // Get the MD5 of the existing file from the server
       for (char ch : dest.path)
         std::cout << std::hex << ch;
-      DLOG_S(9) << "Path: " << dest.path << ";";
       http::request<http::empty_body> req{http::verb::head, dest.path, 11};
       req.set(http::field::host, dest.host);
-      req.set(http::field::user_agent, "cdnalizerd v0.2");
+      req.set(http::field::user_agent, userAgent());
       req.set(http::field::accept, "application/json");
-      req.set(http::field::content_length, "0");
       req.set("X-Auth-Token", token);
       DLOG_S(9) << "HTTP Request: " << req;
       http::async_write(conn.stream(), req, conn.yield);
       // Get the response
-      http::response<http::string_body> response;
-      http::async_read(conn.stream(), conn.read_buffer, response, conn.yield);
+      http::response_parser<http::empty_body> parser;
+      parser.skip(true);
+
+      http::async_read_header(conn.stream(), conn.read_buffer, parser, conn.yield);
+      auto response = parser.release();
       DLOG_S(9) << "HTTP Response: " << response;
       if (response.result() != http::status::ok) {
         LOG_S(ERROR) << "Bad HTTP Response. HTTP Request: " << req

@@ -4,13 +4,19 @@
 #include "logging.hpp"
 
 #include <string>
+#include <vector>
 
 namespace cdnalizerd {
 
 struct UnParsedURL {
 public:
-  std::string raw;
-  UnParsedURL(std::string raw) : raw(raw) {}
+  std::vector<std::string> parts;
+  UnParsedURL(std::string a, std::string b)
+      : parts{{std::move(a)}, {std::move(b)}} {}
+  UnParsedURL(UnParsedURL &&other, std::string next)
+      : parts(std::move(other.parts)) {
+    parts.push_back(std::move(next));
+  }
 };
 
 struct URL {
@@ -22,7 +28,7 @@ private:
 public:
   URL() : raw() {}
   URL(std::string raw) : raw(std::move(raw)) { parse(); }
-  URL(UnParsedURL in) : raw(std::move(in.raw)) { parse(); }
+  URL(UnParsedURL in);
   std::string scheme;
   std::string user;
   std::string password;
@@ -40,14 +46,12 @@ public:
   const std::string &whole() const { return raw; }
 };
 
-UnParsedURL joinStrings(const std::string& a, const std::string& b);
-
-inline UnParsedURL operator/(const UnParsedURL &url, std::string s) {
-  return joinStrings(url.raw, s);
+inline UnParsedURL operator/(UnParsedURL url, std::string s) {
+  return UnParsedURL(std::move(url), s);
 }
 
 inline UnParsedURL operator/(const URL &url, std::string s) {
-  return joinStrings(url.whole(), s);
+  return UnParsedURL(url.whole(), s);
 }
 
 
