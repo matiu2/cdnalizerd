@@ -234,6 +234,15 @@ struct Instance {
     assert(size >= sizeof(inotify_event));
     assert(size < sizeof(buffer));
     inotify_event* event = (inotify_event*)(buffer);
+    // Make sure we've read the whole length of the file name
+    if (size < (sizeof(inotify_event) + event->len)) {
+      toRead = sizeof(inotify_event) + event->len - size;
+      DLOG_S(9) << "Getting rest of event name. Buffer size(" << size
+                << ") - len(" << event->len << ") - toRead(" << toRead << ")";
+      int bytesRead = boost::asio::async_read(
+          stream, asio::buffer(buffer_data_end, sizeof(buffer) - size),
+          boost::asio::transfer_at_least(toRead), yield);
+    }
     DLOG_S(9) << "Raw event: \n"
               << "wd: " << event->wd << "\nmask: " << event->mask
               << "\ncookie: " << event->cookie << "\nlen: " << event->len
