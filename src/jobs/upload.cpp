@@ -51,7 +51,7 @@ const std::string md5_from_file(const fs::path &path) {
 
 /// Uploads a file.
 /// if md5 is not set, it'll read it from the file
-void upload(const fs::path &source, const URL &dest, HTTPS &conn,
+void upload(const fs::path &source, URL dest, HTTPS &conn,
             const std::string &token, std::string md5 = "") {
   try {
     LOG_SCOPE_F(5, "cdnalizerd::upload");
@@ -67,7 +67,7 @@ void upload(const fs::path &source, const URL &dest, HTTPS &conn,
     http::request<http::file_body> req;
     setDefaultHeaders(req, token);
     req.set(http::field::etag, md5);
-    req.target(dest.path_part());
+    req.target(dest.pathAndSearch);
     req.method(http::verb::put);
     // Open the file
     boost::system::error_code ec;
@@ -151,7 +151,7 @@ Job makeConditionalUploadJob(fs::path source, URL dest) {
         std::cout << std::hex << ch;
       DLOG_S(9) << "Path: " << dest.path << ";";
       http::request<http::empty_body> req{http::verb::head, dest.path, 11};
-      req.set(http::field::host, dest.hostname);
+      req.set(http::field::host, dest.host);
       req.set(http::field::user_agent, "cdnalizerd v0.2");
       req.set(http::field::accept, "application/json");
       req.set(http::field::content_length, "0");

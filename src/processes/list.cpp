@@ -21,13 +21,14 @@ void genericDoListContainer(
     yield_context &yield, const Rackspace &rackspace, const ConfigEntry &entry,
     bool restrict_to_remote_dir, std::string extra_params = "") {
   URL baseURL(rackspace.getURL(*entry.region, entry.snet));
-  LOG_S(INFO) << "Connecting to " << baseURL.host_part() << std::endl;
+  LOG_S(INFO) << "Connecting to " << baseURL.scheme_host_port() << std::endl;
 
-  HTTPS conn(yield, baseURL.hostname);
-  http::request<http::empty_body> req{http::verb::get, baseURL.path_part() + "/" + *entry.container , 11};
-      req.set(http::field::user_agent, "cdnalizerd v0.2");
-      req.set(http::field::accept, "application/json");
-      req.set("X-Auth-Token", rackspace.token());
+  HTTPS conn(yield, baseURL.host);
+  http::request<http::empty_body> req{
+      http::verb::get, baseURL.path + "/" + *entry.container, 11};
+  req.set(http::field::user_agent, "cdnalizerd v0.2");
+  req.set(http::field::accept, "application/json");
+  req.set("X-Auth-Token", rackspace.token());
 
   const size_t limit = 10000;
   std::string marker;
@@ -36,7 +37,7 @@ void genericDoListContainer(
     prefix = entry.remote_dir;
 
   while (true) {
-    std::string path(baseURL.path_part() + "/" + *entry.container + "?limit=" +
+    std::string path(baseURL.path + "/" + *entry.container + "?limit=" +
                      std::to_string(limit));
     if (!marker.empty())
       path += "&marker=" + marker;
@@ -66,12 +67,12 @@ void genericDoListContainer(
       } 
       case http::status::not_found: {
         LOG_S(ERROR) << "Path not found on server: "
-                     << baseURL.host_part() + path;
+                     << baseURL.scheme_host_port() + path;
       }
       case http::status::conflict: {
         // TODO: Maybe set a timer and try againg in a minute ?
         LOG_S(ERROR) << "Server unable to comply - try again later: "
-                     << baseURL.host_part() + path;
+                     << baseURL.scheme_host_port() + path;
       }
       default:
         BOOST_THROW_EXCEPTION(

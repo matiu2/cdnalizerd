@@ -33,8 +33,8 @@ void doWork(Worker &worker, asio::yield_context yield) {
     // Connect
     LOG_SCOPE_FUNCTION(INFO);
     LOG_S(INFO) << "Worker " << &worker << " connecting to "
-                << worker.url.host_part() << std::endl;
-    HTTPS conn(yield, worker.url.hostname);
+                << worker.url.host << std::endl;
+    HTTPS conn(yield, worker.url.host);
 
     while (worker.hasMoreJobs()) {
       Job job = std::move(worker.getNextJob());

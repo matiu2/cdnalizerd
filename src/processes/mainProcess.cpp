@@ -79,7 +79,7 @@ void watchForFileChanges(yield_context yield, const Config &config) {
       Rackspace &rs = found->second;
       fs::path localFile(event.path());
       URL url(rs.getURL(*entry.region, entry.snet));
-      auto worker = workers.getWorker(url, rs);
+      auto worker = workers.getWorker(url.whole(), rs);
       std::string localRelativePath(
           fs::relative(event.path(), entry.local_dir).string());
 
@@ -88,6 +88,12 @@ void watchForFileChanges(yield_context yield, const Config &config) {
       if (event.wasClosed()) {
         LOG_S(5) << "File was closed for writing: " << localFile.native()
                  << std::endl;
+        LOG_S(9) << "Making URL. part1: " << url.whole();
+        LOG_S(9) << "container: " << *entry.container;
+        LOG_S(9) << "Remote dir: " << entry.remote_dir;
+        LOG_S(9) << "localPath: " << localRelativePath;
+        LOG_S(9) << "localPath size: " << localRelativePath.size();
+
         worker->addJob(jobs::makeConditionalUploadJob(
             localFile,
             url / *entry.container / entry.remote_dir / localRelativePath));

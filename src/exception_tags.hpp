@@ -32,6 +32,8 @@ using error_category =
 using http_status =
     boost::error_info<struct HTTPStatus, boost::beast::http::status>;
 
+using URL = boost::error_info<struct Original, std::string>;
+
 // ** Tags to do with the uplodaing files jobs - ENDS ** //
   
 } /* err  */ 

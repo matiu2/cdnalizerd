@@ -1,31 +1,45 @@
 #pragma once
 
+#include "exception_tags.hpp"
+
 #include <string>
-#include <map>
 
 namespace cdnalizerd {
-    
-struct URL {
-  std::string protocol;
-  std::string username;
-  std::string password;
-  std::string hostname;
-  unsigned short port;
-  std::string path;
-  std::map<std::string, std::string> params;
-  URL(std::string url);
-  URL() {}
-  std::string whole() const;
-  /// Returns just the host part: eg. http://some-domain.com:2020
-  /// Useful for the tcp connection
-  std::string host_part() const;
-  /// Returns everything after the host part
-  std::string path_part() const;
-  URL& operator =(const std::string& url);
-  bool is_ssl() const { return protocol == "https"; }
-  operator std::string() const { return whole(); }
-};
-URL& operator /(URL& a, const std::string& b);
-  
-} /* cdnalizerd */ 
 
+struct URL {
+
+private:
+  std::string raw;
+  void parse();
+
+public:
+  URL() : raw() {}
+  URL(std::string raw) : raw(std::move(raw)) { parse(); }
+  std::string scheme;
+  std::string user;
+  std::string password;
+  std::string host;
+  std::string port;
+  std::string path;
+  std::string search;
+  std::string pathAndSearch;
+  std::string scheme_host_port() {
+    if (port.empty())
+      return scheme + host;
+    else
+      return scheme + host + ':' + port;
+  }
+  const std::string &whole() const { return raw; }
+  URL& operator/(std::string s) {
+    bool urlEndsWithSlash = (!raw.empty()) && (raw.back() == '/');
+    bool pathStartsWithSlash = (!path.empty()) && (path.front() == '/');
+    if (urlEndsWithSlash && pathStartsWithSlash)
+      return raw.substr(0, raw.size() - 1) + path;
+    else if (urlEndsWithSlash || pathStartsWithSlash)
+      return raw + path;
+    else
+      return raw + '/' + path;
+  }
+};
+
+} /* cdnalizerd  */ 

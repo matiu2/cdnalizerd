@@ -27,7 +27,7 @@ void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
            << config.region << " - " << (config.snet ? "snet" : "no snet")
            << std::endl;
   URL baseURL(rs.getURL(*config.region, config.snet));
-  HTTPS conn(yield, baseURL.hostname);
+  HTTPS conn(yield, baseURL.host);
   // Get iterators to our local files
   std::vector<fs::path> localFiles(
       fs::recursive_directory_iterator(config.local_dir),
@@ -71,7 +71,7 @@ void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
       int diff = localRelativePath.compare(remoteRelativePath);
       auto upload = [&](){
         URL url(baseURL);
-        auto worker = workers.getWorker(url, rs);
+        auto worker = workers.getWorker(url.whole(), rs);
         worker->addJob(jobs::makeUploadJob(
             *local_iterator,
             url / *config.container / config.remote_dir / localRelativePath));
@@ -108,7 +108,7 @@ void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
   while (local_iterator != local_end) {
     // The local file doesn't exist on the server and should be uploaded
     URL url(baseURL);
-    auto worker = workers.getWorker(url, rs);
+    auto worker = workers.getWorker(url.whole(), rs);
     std::string localRelativePath(
         fs::relative(*local_iterator, config.local_dir).string());
     worker->addJob(jobs::makeUploadJob(
