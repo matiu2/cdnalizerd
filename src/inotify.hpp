@@ -222,9 +222,12 @@ struct Instance {
       // If we don't already have enough data in the buffer, read some more
       toRead -= size;
       DLOG_S(9) << "toRead: " << toRead;
+      DLOG_S(9) << "NAME_MAX: " << NAME_MAX;
       DLOG_S(9) << "sizeof(inotify_event): " << sizeof(inotify_event);
+      size_t maxRead(sizeof(buffer) - size);
+      DLOG_S(9) << "Max Read: " << maxRead;
       int bytesRead = boost::asio::async_read(
-          stream, asio::buffer(buffer_data_end, sizeof(buffer) - size),
+          stream, asio::buffer(buffer_data_end, maxRead),
           boost::asio::transfer_at_least(toRead), yield);
       DLOG_S(9) << "bytesRead: " << bytesRead;
       buffer_data_end += bytesRead;
@@ -232,7 +235,7 @@ struct Instance {
       DLOG_S(9) << "New size: " << size;
     }
     assert(size >= sizeof(inotify_event));
-    assert(size < sizeof(buffer));
+    assert(size <= sizeof(buffer));
     inotify_event* event = (inotify_event*)(buffer);
     // Make sure we've read the whole length of the file name
     if (size < (sizeof(inotify_event) + event->len)) {

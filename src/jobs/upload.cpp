@@ -67,6 +67,7 @@ void upload(const fs::path &source, URL dest, HTTPS &conn,
     http::request<http::file_body> req;
     setDefaultHeaders(req, token);
     req.set(http::field::etag, md5);
+    req.set(http::field::host, dest.host);
     req.target(dest.pathAndSearch);
     req.method(http::verb::put);
     // Open the file
@@ -151,6 +152,7 @@ Job makeConditionalUploadJob(fs::path source, URL dest) {
         std::cout << std::hex << ch;
       http::request<http::empty_body> req{http::verb::head, dest.path, 11};
       req.set(http::field::host, dest.host);
+      req.set(http::field::host, dest.host);
       req.set(http::field::user_agent, userAgent());
       req.set(http::field::accept, "application/json");
       req.set("X-Auth-Token", token);
@@ -163,7 +165,12 @@ Job makeConditionalUploadJob(fs::path source, URL dest) {
       http::async_read_header(conn.stream(), conn.read_buffer, parser, conn.yield);
       auto response = parser.release();
       DLOG_S(9) << "HTTP Response: " << response;
-      if (response.result() != http::status::ok) {
+      if (response.result() == http::status::not_found) {
+        // File doesn't exist on the server, upload it
+        LOG_S(1) << "File not found on server, uploading..";
+        upload(source, dest, conn, token, md5);
+        return;
+      } else if (response.result() != http::status::ok) {
         LOG_S(ERROR) << "Bad HTTP Response. HTTP Request: " << req
                      << "\n Response: " << response;
         BOOST_THROW_EXCEPTION(

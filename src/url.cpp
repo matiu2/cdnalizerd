@@ -2,7 +2,6 @@
 
 #include <boost/algorithm/string/join.hpp>
 
-// Implements URL::parse - see url_implementation.hpp.rl for real source file
 #include "url_parser.hpp"
 
 
