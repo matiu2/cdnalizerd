@@ -42,6 +42,8 @@ std::ostream &operator<<(std::ostream &out, const Event &e) {
     out << " isDir ";
   if (e.oneShot())
     out << " oneShot ";
+  if (e.wasIgnored())
+    out << " ignored ";
   return out;
 }
 

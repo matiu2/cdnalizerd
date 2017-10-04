@@ -62,6 +62,11 @@ void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
     auto remote_iterator = remoteList.begin();
     auto remote_end = remoteList.end();
     while ((local_iterator != local_end) && (remote_iterator != remote_end)) {
+      // We don't do anything with directories
+      if (fs::is_directory(*local_iterator)) {
+        ++local_iterator;
+        continue;
+      }
       // Compare the remote_dir with local file minus the config
       const std::string &remotePath(remote_iterator->at("name"));
       std::string remoteRelativePath(

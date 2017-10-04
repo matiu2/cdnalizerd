@@ -152,7 +152,6 @@ Job makeConditionalUploadJob(fs::path source, URL dest) {
         std::cout << std::hex << ch;
       http::request<http::empty_body> req{http::verb::head, dest.path, 11};
       req.set(http::field::host, dest.host);
-      req.set(http::field::host, dest.host);
       req.set(http::field::user_agent, userAgent());
       req.set(http::field::accept, "application/json");
       req.set("X-Auth-Token", token);

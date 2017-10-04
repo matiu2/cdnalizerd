@@ -1,0 +1,20 @@
+ * Handle deleting of a dir (kill watches)
+ * When a new dir is detected, create inotify watches for everything inside it
+ * Handle moving files
+   + from one watch to another
+   + from outside our domain to inside 
+   + from inside our domain to outside
+ * Handle moving directories (create and destroy inotify watches as needed)
+   + from one watch to another
+   + from outside our domain to inside 
+   + from inside our domain to outside
+ * follow symlinks option
+ * initial sync options
+   + no sync
+   + only upload missing
+   + check modification times only
+   + check md5 of all files (lots of disk IO)
+ * bidirectional
+   + upload only
+   + download only
+   + upload first / download first

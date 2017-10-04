@@ -5,6 +5,7 @@
 #include "syncAllDirectories.hpp"
 #include "../WorkerManager.hpp"
 #include "../jobs/upload.hpp"
+#include "../jobs/delete.hpp"
 #include "../logging.hpp"
 #include "../exception_tags.hpp"
 
@@ -26,20 +27,34 @@ constexpr int maskToFollow =
 using Cookies = std::map<uint32_t, inotify::Event>;
 
 // Maps inotify watch handles to config entries
-using WatchToConfig = std::map<uint32_t, ConfigEntry>; 
+using WatchToConfig = std::map<uint32_t, ConfigEntry>;
+
+void watchNewDirectory(inotify::Instance &inotify, WatchToConfig &watchToConfig,
+                       const ConfigEntry &entry, const char *path) {
+  LOG_S(1) << "Adding inotify watch for: " << path;
+  // Starts watching a directory
+  inotify::Watch &watch = inotify.addWatch(path, maskToFollow);
+  watchToConfig[watch.handle()] = entry;
+}
+
+void recursivelyWatchDirectory(inotify::Instance &inotify,
+                               WatchToConfig &watchToConfig,
+                               const ConfigEntry &entry, const char *path) {
+  watchNewDirectory(inotify, watchToConfig, entry, entry.local_dir.c_str());
+  // Recurse to all sub directories
+  for (auto d = fs::recursive_directory_iterator(path); d != decltype(d)();
+       ++d) {
+    if (fs::is_directory(*d))
+      watchNewDirectory(inotify, watchToConfig, entry,
+                        d->path().native().c_str());
+  }
+}
 
 /// Reads our configuration object and creates all the inotify watches needed
-void createINotifyWatches(inotify::Instance &inotify, WatchToConfig& watchToConfig, const Config& config) {
-  for (const ConfigEntry &entry : config.entries()) {
-    // Starts watching a directory
-    inotify::Watch &watch =
-        inotify.addWatch(entry.local_dir.c_str(), maskToFollow);
-    watchToConfig[watch.handle()] = entry;
-    walkDir(entry.local_dir.c_str(), [&](const char *path) {
-      if (!inotify.alreadyWatching(path))
-        inotify.addWatch(path, maskToFollow);
-    });
-  }
+void createINotifyWatches(inotify::Instance &inotify,
+                          WatchToConfig &watchToConfig, const Config &config) {
+  for (const ConfigEntry &entry : config.entries())
+    recursivelyWatchDirectory(inotify, watchToConfig, entry, entry.local_dir.c_str());
 }
 
 void watchForFileChanges(yield_context yield, const Config &config) {
@@ -92,8 +107,28 @@ void watchForFileChanges(yield_context yield, const Config &config) {
         worker->addJob(jobs::makeConditionalUploadJob(
             localFile,
             url / *entry.container / entry.remote_dir / localRelativePath));
+      } else if (event.wasIgnored()) {
+          LOG_S(9) << "Removing inotify watch for deleted directory";
+          auto found = watchToConfig.find(event.watch().handle());
+          // We should have already made a note of this watch and be tracking it
+          assert(found != watchToConfig.end());
+          watchToConfig.erase(found);
+          inotify.removeWatch(event.watch());
+      } else if (event.wasDeleted()) {
+        LOG_S(9) << "Got delete event: " << event.path();
+        if (!event.isDir()) {
+          LOG_S(9) << "Creating delete job";
+          worker->addJob(jobs::makeRemoteDeleteJob(
+              url / *entry.container / entry.remote_dir / localRelativePath));
+        }
+      } else if (event.wasCreated()) {
+        // ... if a directory was created, add a watch to it
+        if (event.isDir())
+          watchNewDirectory(inotify, watchToConfig, entry,
+                            event.path().c_str());
+        // TODO: Sometimes files are created with > zero bytes. Check the file
+        // size; if it's > 0, upload it
       }
-
       /*
       // If it's a move event, find its pair
       if (event.cookie) {

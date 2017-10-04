@@ -12,9 +12,6 @@ namespace cdnalizerd {
 /// Returns true if 'path' is a directory
 bool isDir(const char *path);
 
-/// Calls 'callback' for each subdir (but not for each file)
-void walkDir(const char *path, std::function<void(const char *)> callback);
-
 /// Joins two urls with exactly one path separator
 template <typename... T>
 std::string joinPaths(T...aParams) {

@@ -32,7 +32,7 @@ private:
   int inotify_handle = 0;
   int _handle = -1;
   // Erases all knowledge of our resources
-  void erase() {
+  void die() {
     inotify_handle = 0;
     _handle = -1;
   }
@@ -51,25 +51,22 @@ public:
   Watch(Watch &&other)
       : inotify_handle(other.inotify_handle), _handle(other._handle),
         path(std::move(other.path)) {
-    other.erase(); // Make the other one forget about our resources, so that
-                   // when the destructor is called, it won't try to free them,
-                   // as we own them now
+    other.die(); // Make the other one forget about our resources, so that
+                 // when the destructor is called, it won't try to free them,
+                 // as we own them now
   }
   // Clean up resources on destruction
   ~Watch() {
-    if (_handle != -1) {
-      int result = inotify_rm_watch(inotify_handle, _handle);
-      if (result == -1)
-        throw std::system_error(errno, std::system_category());
-    }
+    if (_handle != -1)
+      inotify_rm_watch(inotify_handle, _handle);
   }
   // Move assignment is fine
   Watch &operator=(Watch &&other) {
     inotify_handle = other.inotify_handle;
     _handle = other._handle;
-    other.erase(); // Make the other one forget about our resources, so that
-                   // when the destructor is called, it won't try to free them,
-                   // as we own them now
+    other.die(); // Make the other one forget about our resources, so that
+                 // when the destructor is called, it won't try to free them,
+                 // as we own them now
     return *this;
   }
   bool operator==(const Watch &other) {
@@ -154,6 +151,12 @@ struct Event {
 
 /// Print the event info
 std::ostream &operator<<(std::ostream &out, const Event &e);
+
+/// Print an inotify watch
+inline std::ostream &operator<<(std::ostream &out, const Watch &watch) {
+  out << watch.handle() << " - " << watch.path;
+  return out;
+}
 namespace asio = boost::asio;
 
 /// A collection of Watches
@@ -181,34 +184,43 @@ struct Instance {
   Watch &addWatch(const char *path, uint32_t mask) {
     LOG_S(5) << "Watching path: " << path << " mask(" << std::hex << mask
              << ") inotify handle(" << inotify_handle << ")" << std::endl;
+    DLOG_S(9) << "paths: find " << path;
     auto found = paths.find(path);
     if (found != paths.end())
       throw std::logic_error("Can't watch the same path twice");
     auto watch = Watch(inotify_handle, path, mask);
     LOG_S(5) << "watch handle for path (" << path << ") = " << watch.handle()
              << std::endl;
+    DLOG_S(9) << "paths: insert " << path << " - " << watch.handle();
     paths.insert({watch.path, watch.handle()});
+    DLOG_S(9) << "watches: adding: " << watch;
     auto result =
         watches.emplace(std::make_pair(watch.handle(), std::move(watch)));
     return result.first->second;
   }
-  void removeWatch(Watch &watch) {
-    LOG_S(5) << "Removing watch: " << watch.path << std::endl;
+  void removeWatch(const Watch &watch) {
+    DLOG_S(9) << "watches: find " << watch;
     auto found = watches.find(watch.handle());
     if (found != watches.end()) {
+      DLOG_S(9) << "paths: delete " << found->second.path;
       paths.erase(found->second.path);
+      DLOG_S(9) << "watches: delete " << watch;
       watches.erase(found);
     }
   }
   void removeWatch(const std::string &path) {
+    DLOG_S(9) << "paths: find " << path;
     auto found = paths.find(path);
     if (found != paths.end()) {
       int handle = found->second;
+      DLOG_S(9) << "watches: delete " << handle;
       watches.erase(handle);
+      DLOG_S(9) << "paths: delete " << found->first;
       paths.erase(found);
     }
   }
   bool alreadyWatching(const std::string &path) const {
+    DLOG_S(9) << "paths: find " << path;
     auto found = paths.find(path);
     return (found != paths.end());
   }

@@ -33,6 +33,7 @@ add_test(test_login test_login)
 add_executable(cdnalizerd 
   main.cpp https.cpp utils.cpp inotify.cpp https.cpp AccountCache.cpp Job.cpp Worker.cpp logging.cpp url.cpp
   jobs/upload.cpp 
+  jobs/delete.cpp 
   processes/mainProcess.cpp processes/login.cpp processes/list.cpp processes/syncAllDirectories.cpp
   config_reader/config_reader.cpp config_reader/config.cpp config_reader/config_writer.cpp)
 add_dependencies(cdnalizerd url_parser.hpp)

@@ -21,26 +21,6 @@ bool isDir(dirent *entry) {
   return is_dir;
 }
 
-void walkDir(const char *path, std::function<void(const char *)> callback) {
-  assert(isDir(path));
-  auto dir = opendir(path);
-  if (!dir)
-    throw std::system_error(errno, std::system_category());
-  // Read through this directory
-  while (true) {
-    dirent *entry = readdir(dir);
-    if (entry == nullptr)
-      break;
-    if (isDir(entry)) {
-      if ((strcmp(entry->d_name, ".") == 0) &&
-          (strcmp(entry->d_name, "..") == 0)) {
-        callback(entry->d_name);
-        walkDir(entry->d_name, callback);
-      }
-    }
-  }
-}
-
 std::string joinPaths(const std::string &base, const std::string &extra) {
   auto out = base;
   if (out.back() != '/')
