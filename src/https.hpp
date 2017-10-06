@@ -54,6 +54,7 @@ public:
     boost::system::error_code ec;
     if (!s)
       return;
+    DLOG_S(9) << "Shutting down https connection: " << hostname;
     s->async_shutdown(yield[ec]);
     using asio::error::misc_errors;
     using asio::error::basic_errors;
@@ -85,6 +86,10 @@ public:
       return;
     }
     // Something scary happened, throw an exception
+    LOG_S(ERROR) << "Unable to shut down SSL for " << hostname
+                 << " error code: " << ec.value()
+                 << " error category: " << ec.category().name()
+                 << " error message: " << ec.message();
     BOOST_THROW_EXCEPTION(
         boost::enable_error_info(boost::system::system_error(ec))
         << err::action("Shutting down HTTPS") << err::source(hostname));

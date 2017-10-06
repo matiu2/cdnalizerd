@@ -16,12 +16,10 @@ void deleteRemoteFile(URL dest, HTTPS &conn, const std::string &token) {
   req.set("X-Auth-Token", token);
   DLOG_S(9) << "HTTP Request: " << req;
   http::async_write(conn.stream(), req, conn.yield);
+  DLOG_S(9) << "Reading response";
   // Get the response
-  http::response_parser<http::empty_body> parser;
-  parser.skip(true);
-
-  http::async_read_header(conn.stream(), conn.read_buffer, parser, conn.yield);
-  auto response = parser.release();
+  http::response<http::empty_body> response;
+  http::async_read(conn.stream(), conn.read_buffer, response, conn.yield);
   DLOG_S(9) << "HTTP Response: " << response;
   switch (response.result()) {
   case http::status::not_found: {
@@ -41,7 +39,7 @@ void deleteRemoteFile(URL dest, HTTPS &conn, const std::string &token) {
 }
 
 Job makeRemoteDeleteJob(URL dest) {
-  return Job("Remote delete"s + dest.whole(),
+  return Job("Remote delete job for "s + dest.whole(),
              std::bind(deleteRemoteFile, std::move(dest), std::placeholders::_1,
                        std::placeholders::_2));
 }

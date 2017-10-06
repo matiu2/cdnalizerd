@@ -22,11 +22,14 @@ namespace cdnalizerd {
 namespace jobs {
 
 /// Returns the file size and md5
-const std::string md5_from_file(const fs::path &path) {
+std::string md5_from_file(const fs::path &path) {
   LOG_SCOPE_F(5, "md5_from_file");
   unsigned char result[MD5_DIGEST_LENGTH];
   try {
-    assert(fs::is_regular_file(path));
+    if (!fs::is_regular_file(path)) {
+      LOG_S(0) << "File may have been removed since event happened. Upload aborted";
+      return "";
+    }
     boost::iostreams::mapped_file_source src(path.native());
     MD5((const unsigned char *)src.data(), src.size(), result);
   } catch (std::exception e) {
@@ -61,6 +64,8 @@ void upload(const fs::path &source, URL dest, HTTPS &conn,
     if (md5.empty()) {
       DLOG_S(8) << "Getting MD5 of local file: " << source.native();
       md5 = md5_from_file(source);
+      if (md5 == "")
+        return;
       DLOG_S(9) << "Local MD5: " << md5;
     }
     // Make the upload request
@@ -147,6 +152,8 @@ Job makeConditionalUploadJob(fs::path source, URL dest) {
       DLOG_S(5) << "Getting MD5 of local file: " << source.native();
       std::string md5;
       md5 = md5_from_file(source);
+      if (md5 == "")
+        return;
       // Get the MD5 of the existing file from the server
       for (char ch : dest.path)
         std::cout << std::hex << ch;

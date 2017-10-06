@@ -1,4 +1,4 @@
- * Handle deleting of a dir (kill watches)
+ * Fix the broken pipe error
  * When a new dir is detected, create inotify watches for everything inside it
  * Handle moving files
    + from one watch to another

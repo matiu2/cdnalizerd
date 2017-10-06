@@ -47,6 +47,12 @@ void doWork(Worker &worker, asio::yield_context yield) {
         e << err::jobName(job.name);
         LOG_S(ERROR) << "Job failed: "
                      << boost::diagnostic_information(e, true);
+      } catch (boost::system::system_error &e) {
+        LOG_S(ERROR) << "Errored job (boost::system::system_error): " << job.id
+                     << " " << job.name << ": " << e.code().value() << " - "
+                     << e.code().category().name() << " - "
+                     << e.code().message() << " - "
+                     << boost::diagnostic_information(e, true);
       } catch (std::exception &e) {
         LOG_S(ERROR) << "Errored job (std::exception): " << job.id << " "
                      << job.name << ": "
@@ -54,18 +60,20 @@ void doWork(Worker &worker, asio::yield_context yield) {
       } catch (...) {
         LOG_S(ERROR) << "Errored job (unkown exception): " << job.id << " "
                      << job.name
-                     << boost::current_exception_diagnostic_information(true)
-                     << std::endl;
+                     << boost::current_exception_diagnostic_information(true);
       }
       if (!worker.hasMoreJobs()) {
         // If we have no more work to do, keep the connection open for some time
+        LOG_S(3) << "Worker " << &worker << " idling";
         stateSentry.updateState(Idle);
         boost::asio::deadline_timer idleTimer(service(),
                                               boost::posix_time::seconds(20));
         idleTimer.async_wait(yield);
-        if (worker.hasMoreJobs())
+        if (worker.hasMoreJobs()) {
+          LOG_S(3) << "Worker " << &worker << " returning to work";
           stateSentry.updateState(Working);
-        else {
+        } else {
+          LOG_S(3) << "Worker " << &worker << " dying";
           stateSentry.updateState(Dead);
           break;
         }

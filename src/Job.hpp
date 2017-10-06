@@ -23,9 +23,19 @@ struct Job {
   static size_t nextId;
   const size_t id;
   const std::string name;
-  const Work go;
-  Job(std::string name, Work go)
-      : id(nextId++), name(std::move(name)), go(go) {
+  const Work work;
+  void go(HTTPS& conn, const std::string& token)  {
+    LOG_S(3) << "job: start " << id << " - " << name;
+    try {
+      work(conn, token);
+    } catch(...) {
+      LOG_S(3) << " job: failed " << id << " - " << name;
+      throw;
+    }
+    LOG_S(3) << " job: done " << id << " - " << name;
+  }
+  Job(std::string name, Work work)
+      : id(nextId++), name(std::move(name)), work(work) {
     LOG_S(5) << "Job created: " << *this << std::endl;
   }
   Job(Job&& other) = default;
