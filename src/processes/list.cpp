@@ -27,7 +27,6 @@ void genericDoListContainer(
   http::request<http::empty_body> req{
       http::verb::get, baseURL.path + "/" + *entry.container, 11};
   req.set(http::field::user_agent, "cdnalizerd v0.2");
-  req.set(http::field::accept, "application/json");
   req.set("X-Auth-Token", rackspace.token());
 
   const size_t limit = 10000;
