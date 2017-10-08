@@ -1,3 +1,11 @@
+ + Be able to upload zero length files
+ + Support rmdir
+ + Make it handle authorization failed then re-authenticate:
+     2017-10-09 04:41:14.615 (140812.112s) [        B2F57740]             Worker.cpp:53    WARN| .   .   .   .   Job failed: /home/ubuntu/projects/cdnalizerd/src/jobs/delete.cpp(40): Throw in function void cdnalizerd::jobs::deleteRemoteFile(cdnalizerd::URL, cdnalizerd::HTTPS &, const std::string &)
+     Dynamic exception type: boost::exception_detail::clone_impl<boost::exception_detail::error_info_injector<std::runtime_error> >
+     std::exception::what: HTTP Bad Response
+     [cdnalizerd::err::JobName*] = Remote delete job for https://storage101.syd2.clouddrive.com/v1/MossoCloudFS_80061398-2f83-433e-a3fe-ef0ea28a34c5/matt.sherborne.tmp/mister_remotey/this/is/a/dir/file
+     [cdnalizerd::err::HTTPStatus*] = Unauthorized
  * Fix the broken pipe error
  * When a new dir is detected, create inotify watches for everything inside it
  * Handle moving files
@@ -18,3 +26,11 @@
    + upload only
    + download only
    + upload first / download first
+
+------
+
+# Done
+
+## Mon Oct  9 04:50:50 AEST 2017
+
+ + Make it able to handle 'rm -rf some-dir'

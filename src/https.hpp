@@ -35,13 +35,8 @@ private:
 public:
   asio::yield_context &yield;
   boost::beast::flat_buffer read_buffer;
-
-public:
-  HTTPS(asio::yield_context &yield, std::string hostname)
-      : ios(cdnalizerd::service()), yield(yield), ctx(ssl::context::tlsv12),
-        sock(ios), hostname(hostname) {
+  void connect() {
     tcp::resolver dns{ios};
-    ctx.set_default_verify_paths();
     auto const lookup = dns.async_resolve({hostname, "https"}, yield);
     asio::async_connect(sock, lookup, yield);
     sock.set_option(tcp::no_delay(true));
@@ -50,11 +45,9 @@ public:
     s->set_verify_callback(ssl::rfc2818_verification(hostname));
     s->handshake(Stream::client);
   }
-  ~HTTPS() {
-    boost::system::error_code ec;
-    if (!s)
-      return;
+  void disconnect() {
     DLOG_S(9) << "Shutting down https connection: " << hostname;
+    boost::system::error_code ec;
     s->async_shutdown(yield[ec]);
     using asio::error::misc_errors;
     using asio::error::basic_errors;
@@ -86,17 +79,33 @@ public:
       return;
     }
     // Something scary happened, throw an exception
-    LOG_S(ERROR) << "Unable to shut down SSL for " << hostname
-                 << " error code: " << ec.value()
-                 << " error category: " << ec.category().name()
-                 << " error message: " << ec.message();
-    BOOST_THROW_EXCEPTION(
-        boost::enable_error_info(boost::system::system_error(ec))
-        << err::action("Shutting down HTTPS") << err::source(hostname));
+    LOG_S(WARNING) << "Unable to shut down SSL for " << hostname
+                   << " error code: " << ec.value()
+                   << " error category: " << ec.category().name()
+                   << " error message: " << ec.message();
+  }
+
+public:
+  HTTPS(asio::yield_context &yield, std::string hostname)
+      : ios(cdnalizerd::service()), yield(yield), ctx(ssl::context::tlsv12),
+        sock(ios), hostname(hostname) {
+    ctx.set_default_verify_paths();
+    connect();
+  }
+  ~HTTPS() {
+    if (!s)
+      return;
+    disconnect();
   }
   Stream &stream() {
     assert(s);
     return *s;
+  }
+  void reconnect() {
+    disconnect();
+    // Clean out the read buffer so it doesn't affect future reads
+    read_buffer.consume(read_buffer.size()); 
+    connect();
   }
 };
 

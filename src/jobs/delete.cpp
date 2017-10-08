@@ -18,8 +18,11 @@ void deleteRemoteFile(URL dest, HTTPS &conn, const std::string &token) {
   http::async_write(conn.stream(), req, conn.yield);
   DLOG_S(9) << "Reading response";
   // Get the response
-  http::response<http::empty_body> response;
-  http::async_read(conn.stream(), conn.read_buffer, response, conn.yield);
+  http::response_parser<http::empty_body> parser;
+  parser.skip(true);
+  http::async_read_header(conn.stream(), conn.read_buffer, parser, conn.yield);
+
+  auto response = parser.release();
   DLOG_S(9) << "HTTP Response: " << response;
   switch (response.result()) {
   case http::status::not_found: {
