@@ -101,12 +101,13 @@ void watchForFileChanges(yield_context yield, const Config &config) {
       // If the file was closed and may have been written, upload if checksum is
       // different
       if (event.wasClosed()) {
-        LOG_S(5) << "File was closed for writing: " << localFile.native()
-                 << std::endl;
-
-        worker->addJob(jobs::makeConditionalUploadJob(
-            localFile,
-            url / *entry.container / entry.remote_dir / localRelativePath));
+        auto size = fs::file_size(localFile);
+        LOG_S(5) << "File was closed for writing: " << localFile.native() << " "
+                 << size << " bytes";
+        if (size > 0)
+          worker->addJob(jobs::makeConditionalUploadJob(
+              localFile,
+              url / *entry.container / entry.remote_dir / localRelativePath));
       } else if (event.wasIgnored()) {
           LOG_S(9) << "Removing inotify watch for deleted directory";
           auto found = watchToConfig.find(event.watch().handle());

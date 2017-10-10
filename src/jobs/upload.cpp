@@ -32,13 +32,12 @@ std::string md5_from_file(const fs::path &path) {
     }
     boost::iostreams::mapped_file_source src(path.native());
     MD5((const unsigned char *)src.data(), src.size(), result);
-  } catch (std::exception e) {
-    LOG_S(ERROR) << "std::exception: " << e.what();
+  } catch (std::exception &e) {
+    LOG_S(WARNING) << boost::diagnostic_information(e, true);
     BOOST_THROW_EXCEPTION(boost::enable_error_info(e)
                           << err::action("Taking md5"));
   } catch (...) {
-    LOG_S(ERROR) << "Unkown exception: "
-                 << boost::current_exception_diagnostic_information(true);
+    LOG_S(WARNING) << boost::current_exception_diagnostic_information(true);
     BOOST_THROW_EXCEPTION(
         boost::enable_error_info(std::runtime_error("Unknown exception"))
         << err::action("Taking md5"));
@@ -58,14 +57,19 @@ void upload(const fs::path &source, URL dest, HTTPS &conn,
             const std::string &token, std::string md5 = "") {
   try {
     LOG_SCOPE_F(5, "cdnalizerd::upload");
+    if (fs::file_size(source) == 0) {
+      // Code shouldn't really get here, because there's another check in
+      // processes/mainProcess.cpp where it'll only create this job if the file
+      // size is > 0
+      LOG_S(WARNING) << "Unable to upload zero length file. Aborting: " << source.native();
+      return;
+    }
     LOG_S(INFO) << "Uploading " << source.native() << " to " << dest.whole();
     namespace http = boost::beast::http;
     using boost::beast::file_mode;
-    if (md5.empty()) {
+    if (md5.empty() && (source.size() > 0)) {
       DLOG_S(8) << "Getting MD5 of local file: " << source.native();
       md5 = md5_from_file(source);
-      if (md5 == "")
-        return;
       DLOG_S(9) << "Local MD5: " << md5;
     }
     // Make the upload request
@@ -84,12 +88,12 @@ void upload(const fs::path &source, URL dest, HTTPS &conn,
           << err::action("Openning file"));
     }
     req.set(http::field::content_length, req.body.size());
-    DLOG_S(9) << "HTTP Request: " << req.base();
+    LOG_S(9) << "HTTP Request: " << req.base();
     http::async_write(conn.stream(), req, conn.yield);
     // Make sure it's OK
-    http::response<http::empty_body> response;
+    http::response<http::string_body> response;
     http::async_read(conn.stream(), conn.read_buffer, response, conn.yield);
-    DLOG_S(9) << "HTTP Response: " << response;
+    LOG_S(9) << "HTTP Response: " << response;
     switch (response.result()) {
     case http::status::accepted: {
       LOG_S(0) << "Upload has been accepted for processing by the server";
@@ -162,7 +166,7 @@ Job makeConditionalUploadJob(fs::path source, URL dest) {
       req.set(http::field::user_agent, userAgent());
       req.set(http::field::accept, "application/json");
       req.set("X-Auth-Token", token);
-      DLOG_S(9) << "HTTP Request: " << req;
+      LOG_S(9) << "HTTP Request: " << req;
       http::async_write(conn.stream(), req, conn.yield);
       // Get the response
       http::response_parser<http::empty_body> parser;
@@ -170,7 +174,7 @@ Job makeConditionalUploadJob(fs::path source, URL dest) {
 
       http::async_read_header(conn.stream(), conn.read_buffer, parser, conn.yield);
       auto response = parser.release();
-      DLOG_S(9) << "HTTP Response: " << response;
+      LOG_S(9) << "HTTP Response: " << response;
       if (response.result() == http::status::not_found) {
         // File doesn't exist on the server, upload it
         LOG_S(1) << "File not found on server, uploading..";

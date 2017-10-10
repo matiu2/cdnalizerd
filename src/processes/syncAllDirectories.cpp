@@ -92,15 +92,20 @@ void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
         std::string remote_raw = (*remote_iterator)["last_modified"];
         remote_raw[remote_raw.find('T')] = ' ';
         ptime remoteTime(time_from_string(remote_raw));
-        if (localTime > remoteTime)
-          upload();
+        if (localTime > remoteTime) {
+          if (fs::file_size(*local_iterator) > 0)
+            upload();
+          // TODO: If the cloud file has data, and but locally the file is now
+          // empty, depending on the mode, should we delete the cloud version ?
+        }
         // Get the next pair of files
         ++local_iterator;
         ++remote_iterator;
       } else if (diff < 0) {
         // The local file is less than the remote file
         // The local file doesn't exist on the server and should be uploaded
-        upload();
+        if (fs::file_size(*local_iterator) > 0)
+          upload();
         // We need to get the next local file
         ++local_iterator;
       } else {

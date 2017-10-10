@@ -1,4 +1,5 @@
- + Be able to upload zero length files
+ + Exclude '*.php', '/cache/', etc.
+ + Check modification times on the server and if the server file is newer, download it rather than upload it
  + Support rmdir
  + Make it handle authorization failed then re-authenticate:
      2017-10-09 04:41:14.615 (140812.112s) [        B2F57740]             Worker.cpp:53    WARN| .   .   .   .   Job failed: /home/ubuntu/projects/cdnalizerd/src/jobs/delete.cpp(40): Throw in function void cdnalizerd::jobs::deleteRemoteFile(cdnalizerd::URL, cdnalizerd::HTTPS &, const std::string &)
@@ -34,3 +35,4 @@
 ## Mon Oct  9 04:50:50 AEST 2017
 
  + Make it able to handle 'rm -rf some-dir'
+ + Be able to upload zero length files - This was impossible due to server responding with 'unprocessable entity' so we now just don't upload them
