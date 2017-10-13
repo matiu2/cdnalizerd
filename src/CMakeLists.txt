@@ -38,3 +38,13 @@ add_executable(cdnalizerd
   config_reader/config_reader.cpp config_reader/config.cpp config_reader/config_writer.cpp)
 add_dependencies(cdnalizerd url_parser.hpp)
 target_link_libraries(cdnalizerd ${ALL_LIBS})
+
+add_executable(testExcludeFilter excludeFilter.cpp testExcludeFilter.cpp)
+target_link_libraries(testExcludeFilter ${ALL_LIBS})
+
+add_test(NAME testExclude1 COMMAND testExcludeFilter "^f.n")
+add_test(NAME testExclude2 COMMAND testExcludeFilter "^fun")
+add_test(NAME testExclude3 COMMAND testExcludeFilter "a.*b.*c")
+add_test(NAME testExclude4 COMMAND testExcludeFilter "abc")
+add_test(NAME testExclude5 COMMAND testExcludeFilter "abc$")
+add_test(NAME testExclude6 COMMAND testExcludeFilter "fun")
