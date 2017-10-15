@@ -55,9 +55,14 @@ int main(int argc, char **argv) {
   // Handle the options
   std::string config_file_name = options["config"].as<std::string>();
   if (options.count("create-sample")) {
-    cdnalizerd::write_sample_config(config_file_name);
-    LOG_S(INFO) << "Sample config file written to " << config_file_name
-                << std::endl;
+    try {
+      cdnalizerd::write_sample_config(config_file_name);
+      LOG_S(INFO) << "Sample config file written to " << config_file_name
+                  << std::endl;
+    } catch (std::exception& e) {
+      LOG_S(WARNING) << e.what();
+      return -1;
+    }
     return 0;
   }
   if (options.count("list") || options.count("list-detailed") ||

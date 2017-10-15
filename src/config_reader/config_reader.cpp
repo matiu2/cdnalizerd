@@ -99,6 +99,10 @@ struct ConfigReader {
     config.addContainer(pt.get<std::string>("container"));
     config.setSNet(pt.get("snet", false));
     config.addEntry(pt.get<std::string>("local_dir"), pt.get<std::string>("remote_dir"));
+    auto filesToIgnore = pt.get_child_optional("files-to-ignore");
+    if (filesToIgnore)
+      for( const auto& file : *filesToIgnore )
+        config.addFileToIgnore(std::regex(file.second.get_value<std::string>()));
   }
 
   Config &&getConfig() {

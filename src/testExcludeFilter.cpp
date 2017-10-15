@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "excludeFilter.hpp"
+#include "config_reader/config.hpp"
 
 std::vector<std::string> input{"abc",
                                "def",
@@ -38,19 +38,20 @@ int main(int argc, char *argv[]) {
     std::cout << std::endl;
     return 1;
   }  
+  cdnalizerd::ConfigEntry e;
   // Check the ones past on the command line
   int result = 0;
   std::vector<std::string> toCheck(argv, argv + argc);
   for (auto i = toCheck.begin() + 1; i < toCheck.end(); ++i) {
     const std::string &regex(*i);
-    cdnalizerd::addFilter(regex);
-    std::vector<std::string> output;
-    for (const std::string& line : input)
-      if (cdnalizerd::shouldIgnoreFile(line))
-        output.push_back(line);
-    // Check if the output matches expected
-    auto const &expected = regexToExpected.at(regex);
-    if (expected != output) {
+      e.filesToIgnore.emplace_back(std::regex(regex));
+      std::vector<std::string> output;
+      for (const std::string &line : input)
+        if (e.shouldIgnoreFile(line))
+          output.push_back(line);
+      // Check if the output matches expected
+      auto const &expected = regexToExpected.at(regex);
+      if (expected != output) {
         ++result;
         std::cerr << "For regex " << regex << "\n --- expected: \n";
         for (const std::string &ex : expected)

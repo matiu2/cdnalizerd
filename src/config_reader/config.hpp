@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <regex>
 #ifndef NDEBUG
 #include <cassert>
 #endif
@@ -24,18 +25,24 @@ struct ConfigEntry {
   bool move; // Move file to cloud instead of just copy
   std::string local_dir;
   std::string remote_dir;
+  std::vector<std::regex> filesToIgnore;
   ConfigEntry(sstring username, sstring apikey, sstring region,
               sstring container, bool snet, bool move, std::string local_dir,
-              std::string remote_dir)
+              std::string remote_dir, std::vector<std::regex> filesToIgnore)
       : username(username), apikey(apikey), region(region),
         container(container), snet(snet), move(move),
-        local_dir(std::move(local_dir)), remote_dir(std::move(remote_dir)) {}
+        local_dir(std::move(local_dir)), remote_dir(std::move(remote_dir)),
+        filesToIgnore(std::move(filesToIgnore)) {}
 
   ConfigEntry() = default;
   ConfigEntry(const ConfigEntry&) = default;
   ConfigEntry(ConfigEntry&&) = default;
 
   ConfigEntry &operator=(const ConfigEntry &other) = default;
+
+  // Some functionality methods
+  /// Returns true if a file should be ignored
+  bool shouldIgnoreFile(const std::string &fileName);
 
   // To allow easy sorting
   bool operator<(const ConfigEntry &other) const {
@@ -98,6 +105,9 @@ public:
   void addApiKey(std::string apikey) { lastEntry.apikey.reset(new std::string(std::move(apikey))); }
   void addRegion(std::string region) { lastEntry.region.reset(new std::string(std::move(region))); }
   void addContainer(std::string container) { lastEntry.container.reset(new std::string(std::move(container))); }
+  void addFileToIgnore(std::regex file) {
+    lastEntry.filesToIgnore.emplace_back(std::move(file));
+  }
   /// Toggles service net on and off
   void setSNet(bool new_val) {
     lastEntry.snet = new_val;

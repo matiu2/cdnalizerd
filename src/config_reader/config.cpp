@@ -2,6 +2,15 @@
 
 namespace cdnalizerd {
 
+bool ConfigEntry::shouldIgnoreFile(const std::string& fileName) {
+  // Search through each list
+  for (const std::regex& regex : filesToIgnore) {
+    if (std::regex_search(fileName, regex, std::regex_constants::match_any))
+      return true;
+  }
+  return false;
+}
+
 void Config::addEntry(std::string local_dir, std::string remote_dir) {
   // Validate what we have
   if ((!lastEntry.username) || (lastEntry.username->empty()) ||
@@ -32,6 +41,5 @@ ConfigEntry Config::getEntryByPath(const std::string &path) const {
     throw std::logic_error(msg.str());
   }
 }
-
 
 } /* cdnalazired */ 
