@@ -42,7 +42,7 @@ struct ConfigEntry {
 
   // Some functionality methods
   /// Returns true if a file should be ignored
-  bool shouldIgnoreFile(const std::string &fileName);
+  bool shouldIgnoreFile(const std::string &fileName) const;
 
   // To allow easy sorting
   bool operator<(const ConfigEntry &other) const {
@@ -131,10 +131,9 @@ public:
     return *this;
   }
 
-  ConfigEntry getEntryByPath(const std::string &path) const;
+  const ConfigEntry& getEntryByPath(const std::string &path) const;
   const Entries &entries() const { return _entries; }
   /// Returns true if we have a config
   operator bool() const { return _entries.size() > 0; }
-  void write(const std::string& filename);
 };
 }

@@ -104,10 +104,16 @@ void watchForFileChanges(yield_context yield, const Config &config) {
         auto size = fs::file_size(localFile);
         LOG_S(5) << "File was closed for writing: " << localFile.native() << " "
                  << size << " bytes";
-        if (size > 0)
-          worker->addJob(jobs::makeConditionalUploadJob(
-              localFile,
-              url / *entry.container / entry.remote_dir / localRelativePath));
+        if (size > 0) {
+          if (entry.shouldIgnoreFile(localFile.native())) {
+            LOG_S(1) << "Ignoring file " << localFile.native();
+          } else {
+            LOG_S(9) << "Making upload job: " << localFile.native();
+            worker->addJob(jobs::makeConditionalUploadJob(
+                localFile,
+                url / *entry.container / entry.remote_dir / localRelativePath));
+          }
+        }
       } else if (event.wasIgnored()) {
           LOG_S(9) << "Removing inotify watch for deleted directory";
           auto found = watchToConfig.find(event.watch().handle());
@@ -118,9 +124,13 @@ void watchForFileChanges(yield_context yield, const Config &config) {
       } else if (event.wasDeleted()) {
         LOG_S(9) << "Got delete event: " << event.path();
         if (!event.isDir()) {
-          LOG_S(9) << "Creating delete job";
-          worker->addJob(jobs::makeRemoteDeleteJob(
-              url / *entry.container / entry.remote_dir / localRelativePath));
+          if (entry.shouldIgnoreFile(localFile.native())) {
+            LOG_S(1) << "Ignoring file " << localFile.native();
+          } else {
+            LOG_S(9) << "Creating delete job";
+            worker->addJob(jobs::makeRemoteDeleteJob(
+                url / *entry.container / entry.remote_dir / localRelativePath));
+          }
         }
       } else if (event.wasCreated()) {
         // ... if a directory was created, add a watch to it

@@ -2,12 +2,11 @@
 
 namespace cdnalizerd {
 
-bool ConfigEntry::shouldIgnoreFile(const std::string& fileName) {
+bool ConfigEntry::shouldIgnoreFile(const std::string& fileName) const {
   // Search through each list
-  for (const std::regex& regex : filesToIgnore) {
+  for (const std::regex& regex : filesToIgnore)
     if (std::regex_search(fileName, regex, std::regex_constants::match_any))
       return true;
-  }
   return false;
 }
 
@@ -29,7 +28,7 @@ void Config::addEntry(std::string local_dir, std::string remote_dir) {
   _entries.emplace(place, std::move(result));
 }
 
-ConfigEntry Config::getEntryByPath(const std::string &path) const {
+const ConfigEntry& Config::getEntryByPath(const std::string &path) const {
   auto found = std::lower_bound(_entries.begin(), _entries.end(), path);
   if (found != _entries.end())
     return *found;
