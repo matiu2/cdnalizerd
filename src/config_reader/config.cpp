@@ -1,14 +1,30 @@
 #include "config.hpp"
 
+#include "../logging.hpp"
+
 namespace cdnalizerd {
 
 bool ConfigEntry::shouldIgnoreFile(const std::string& fileName) const {
   // Search through each list
+  if (shouldIgnoreDirectory(fileName))
+    return true;
   for (const std::regex& regex : filesToIgnore)
     if (std::regex_search(fileName, regex, std::regex_constants::match_any))
       return true;
   return false;
 }
+
+bool ConfigEntry::shouldIgnoreDirectory(const std::string& dirName) const {
+  // Search through each list
+  for (const std::regex& regex : directoriesToIgnore)
+    if (std::regex_search(dirName, regex, std::regex_constants::match_any)) {
+      DLOG_S(9) << "Ignoring directory: " << dirName;
+      return true;
+    }
+  DLOG_S(9) << "Not ignoring directory: " << dirName;
+  return false;
+}
+
 
 void Config::addEntry(std::string local_dir, std::string remote_dir) {
   // Validate what we have

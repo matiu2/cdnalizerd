@@ -103,6 +103,10 @@ struct ConfigReader {
     if (filesToIgnore)
       for( const auto& file : *filesToIgnore )
         config.addFileToIgnore(std::regex(file.second.get_value<std::string>()));
+    auto directoriesToIgnore = pt.get_child_optional("directories-to-ignore");
+    if (directoriesToIgnore)
+      for( const auto& file : *directoriesToIgnore )
+        config.addDirectoryToIgnore(std::regex(file.second.get_value<std::string>()));
     config.addEntry(pt.get<std::string>("local_dir"), pt.get<std::string>("remote_dir"));
   }
 

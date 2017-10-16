@@ -1,13 +1,14 @@
 #include "mainProcess.hpp"
 
+#include "../WorkerManager.hpp"
+#include "../config_reader/config.hpp"
+#include "../exception_tags.hpp"
 #include "../inotify.hpp"
+#include "../jobs/delete.hpp"
+#include "../jobs/upload.hpp"
+#include "../logging.hpp"
 #include "login.hpp"
 #include "syncAllDirectories.hpp"
-#include "../WorkerManager.hpp"
-#include "../jobs/upload.hpp"
-#include "../jobs/delete.hpp"
-#include "../logging.hpp"
-#include "../exception_tags.hpp"
 
 #include <boost/log/trivial.hpp>
 #include <boost/filesystem.hpp>
@@ -30,11 +31,15 @@ using Cookies = std::map<uint32_t, inotify::Event>;
 using WatchToConfig = std::map<uint32_t, ConfigEntry>;
 
 void watchNewDirectory(inotify::Instance &inotify, WatchToConfig &watchToConfig,
-                       const ConfigEntry &entry, const char *path) {
-  LOG_S(1) << "Adding inotify watch for: " << path;
-  // Starts watching a directory
-  inotify::Watch &watch = inotify.addWatch(path, maskToFollow);
-  watchToConfig[watch.handle()] = entry;
+                       const ConfigEntry &entry, const std::string &path) {
+  if (entry.shouldIgnoreDirectory(path))
+    LOG_S(9) << "Not watching ignored directory " << path;
+  else {
+    LOG_S(1) << "Adding inotify watch for: " << path;
+    // Starts watching a directory
+    inotify::Watch &watch = inotify.addWatch(path.c_str(), maskToFollow);
+    watchToConfig[watch.handle()] = entry;
+  }
 }
 
 void recursivelyWatchDirectory(inotify::Instance &inotify,
@@ -45,8 +50,7 @@ void recursivelyWatchDirectory(inotify::Instance &inotify,
   for (auto d = fs::recursive_directory_iterator(path); d != decltype(d)();
        ++d) {
     if (fs::is_directory(*d))
-      watchNewDirectory(inotify, watchToConfig, entry,
-                        d->path().native().c_str());
+      watchNewDirectory(inotify, watchToConfig, entry, d->path().native());
   }
 }
 

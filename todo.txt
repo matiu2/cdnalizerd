@@ -1,6 +1,7 @@
- + Exclude '*.php', '/cache/', etc.
+ + URL encoding (handle file names with spaces in them)
  + Check modification times on the server and if the server file is newer, download it rather than upload it
  + Support rmdir
+ + Figure out how to catch mkdir -p a/b/c/d/e/f/g (currently it only catches up to a/b/c) - maybe have 0.5 second delay, then do a recursive sync on the dir
  + Make it handle authorization failed then re-authenticate:
      2017-10-09 04:41:14.615 (140812.112s) [        B2F57740]             Worker.cpp:53    WARN| .   .   .   .   Job failed: /home/ubuntu/projects/cdnalizerd/src/jobs/delete.cpp(40): Throw in function void cdnalizerd::jobs::deleteRemoteFile(cdnalizerd::URL, cdnalizerd::HTTPS &, const std::string &)
      Dynamic exception type: boost::exception_detail::clone_impl<boost::exception_detail::error_info_injector<std::runtime_error> >
@@ -32,7 +33,13 @@
 
 # Done
 
+## Mon Oct 16 18:29:06 AEST 2017
+
+ + Exclude '*.php', '/cache/', etc.
+
 ## Mon Oct  9 04:50:50 AEST 2017
 
  + Make it able to handle 'rm -rf some-dir'
  + Be able to upload zero length files - This was impossible due to server responding with 'unprocessable entity' so we now just don't upload them
+
+

@@ -30,13 +30,17 @@ void writeEntry(std::string filename) {
   pt.put("remote_dir", "/images/");
   ptree filesToIgnore;
   filesToIgnore.add("1", ".*php$");
-  filesToIgnore.add("2", "/conf/");
-  filesToIgnore.add("3", "/config/");
-  filesToIgnore.add("4", "/settings/");
-  filesToIgnore.add("5", "/settings/");
-  filesToIgnore.add("6", ".*conf.*xml$");
-  filesToIgnore.add("7", ".*conf.*ini$");
+  filesToIgnore.add("2", ".*conf.*xml$");
+  filesToIgnore.add("3", ".*conf.*ini$");
+  filesToIgnore.add("3", ".*tmp$");
   pt.add_child("files-to-ignore", filesToIgnore);
+
+  ptree directoriesToIgnore;
+  directoriesToIgnore.add("1", "/conf/");
+  directoriesToIgnore.add("2", "/config/");
+  directoriesToIgnore.add("3", "/settings/");
+  directoriesToIgnore.add("4", "/tmp/");
+  pt.add_child("directories-to-ignore", directoriesToIgnore);
 
   std::ofstream out(filename);
   using boost::algorithm::iends_with;

@@ -26,13 +26,16 @@ struct ConfigEntry {
   std::string local_dir;
   std::string remote_dir;
   std::vector<std::regex> filesToIgnore;
+  std::vector<std::regex> directoriesToIgnore;
   ConfigEntry(sstring username, sstring apikey, sstring region,
               sstring container, bool snet, bool move, std::string local_dir,
-              std::string remote_dir, std::vector<std::regex> filesToIgnore)
+              std::string remote_dir, std::vector<std::regex> filesToIgnore,
+              std::vector<std::regex> directoriesToIgnore)
       : username(username), apikey(apikey), region(region),
         container(container), snet(snet), move(move),
         local_dir(std::move(local_dir)), remote_dir(std::move(remote_dir)),
-        filesToIgnore(std::move(filesToIgnore)) {}
+        filesToIgnore(std::move(filesToIgnore)),
+        directoriesToIgnore(std::move(directoriesToIgnore)) {}
 
   ConfigEntry() = default;
   ConfigEntry(const ConfigEntry&) = default;
@@ -43,6 +46,8 @@ struct ConfigEntry {
   // Some functionality methods
   /// Returns true if a file should be ignored
   bool shouldIgnoreFile(const std::string &fileName) const;
+  /// Returns true if a directory should be ignored
+  bool shouldIgnoreDirectory(const std::string &dirName) const;
 
   // To allow easy sorting
   bool operator<(const ConfigEntry &other) const {
@@ -107,6 +112,9 @@ public:
   void addContainer(std::string container) { lastEntry.container.reset(new std::string(std::move(container))); }
   void addFileToIgnore(std::regex file) {
     lastEntry.filesToIgnore.emplace_back(std::move(file));
+  }
+  void addDirectoryToIgnore(std::regex directory) {
+    lastEntry.directoriesToIgnore.emplace_back(std::move(directory));
   }
   /// Toggles service net on and off
   void setSNet(bool new_val) {
