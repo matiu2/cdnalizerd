@@ -1,4 +1,4 @@
- + URL encoding (handle file names with spaces in them)
+   - Also test for utf8 encoded file names
  + Check modification times on the server and if the server file is newer, download it rather than upload it
  + Support rmdir
  + Figure out how to catch mkdir -p a/b/c/d/e/f/g (currently it only catches up to a/b/c) - maybe have 0.5 second delay, then do a recursive sync on the dir
@@ -36,6 +36,7 @@
 ## Mon Oct 16 18:29:06 AEST 2017
 
  + Exclude '*.php', '/cache/', etc.
+ + URL encoding (handle file names with spaces in them)
 
 ## Mon Oct  9 04:50:50 AEST 2017
 

@@ -46,13 +46,15 @@ public:
   const std::string &whole() const { return raw; }
 };
 
+/// Takes a filename or path and url encodes it
+std::string urlencode(const std::string &path);
+
 inline UnParsedURL operator/(UnParsedURL url, std::string s) {
-  return UnParsedURL(std::move(url), s);
+  return UnParsedURL(std::move(url), urlencode(s));
 }
 
 inline UnParsedURL operator/(const URL &url, std::string s) {
-  return UnParsedURL(url.whole(), s);
+  return UnParsedURL(url.whole(), urlencode(s));
 }
-
 
 } /* cdnalizerd  */ 
