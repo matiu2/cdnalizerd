@@ -1,14 +1,13 @@
- + Check modification times on the server and if the server file is newer, download it rather than upload it
  + Support rmdir
  + Figure out how to catch mkdir -p a/b/c/d/e/f/g (currently it only catches up to a/b/c) - maybe have 0.5 second delay, then do a recursive sync on the dir
+     * When a new dir is detected, create inotify watches for everything inside it
  + Make it handle authorization failed then re-authenticate:
      2017-10-09 04:41:14.615 (140812.112s) [        B2F57740]             Worker.cpp:53    WARN| .   .   .   .   Job failed: /home/ubuntu/projects/cdnalizerd/src/jobs/delete.cpp(40): Throw in function void cdnalizerd::jobs::deleteRemoteFile(cdnalizerd::URL, cdnalizerd::HTTPS &, const std::string &)
      Dynamic exception type: boost::exception_detail::clone_impl<boost::exception_detail::error_info_injector<std::runtime_error> >
      std::exception::what: HTTP Bad Response
      [cdnalizerd::err::JobName*] = Remote delete job for https://storage101.syd2.clouddrive.com/v1/MossoCloudFS_80061398-2f83-433e-a3fe-ef0ea28a34c5/matt.sherborne.tmp/mister_remotey/this/is/a/dir/file
      [cdnalizerd::err::HTTPStatus*] = Unauthorized
- * Fix the broken pipe error
- * When a new dir is detected, create inotify watches for everything inside it
+ * Fix the broken pipe error (may already been done)
  * Handle moving files
    + from one watch to another
    + from outside our domain to inside 
@@ -31,6 +30,10 @@
 ------
 
 # Done
+
+## Thu Oct 19 06:39:38 AEST 2017
+
+ + In the initial sync - Check modification times on the server and if the server file is newer, download it rather than upload it
 
 ## Mon Oct 16 18:29:06 AEST 2017
 

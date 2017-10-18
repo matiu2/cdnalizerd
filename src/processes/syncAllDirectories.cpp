@@ -97,6 +97,11 @@ void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
         std::string remote_raw = (*remote_iterator)["last_modified"];
         remote_raw[remote_raw.find('T')] = ' ';
         ptime remoteTime(time_from_string(remote_raw));
+        // Both times come to us in UTC time zone
+        DLOG_S(9) << "Comparing file times for " << local_iterator->native()
+                  << " - local: " << localTime
+                  << " - remote_raw: " << remote_raw
+                  << " - remote: " << remoteTime;
         if (localTime > remoteTime) {
           if (fs::file_size(*local_iterator) > 0)
             upload();
