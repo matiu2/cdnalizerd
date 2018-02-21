@@ -39,6 +39,9 @@ add_executable(cdnalizerd
 add_dependencies(cdnalizerd url_parser.hpp)
 target_link_libraries(cdnalizerd ${ALL_LIBS})
 
+add_executable(cfsync cfsync.cpp) 
+target_link_libraries(cfsync ${ALL_LIBS})
+
 add_executable(testExcludeFilter config_reader/config.cpp testExcludeFilter.cpp logging.cpp)
 target_link_libraries(testExcludeFilter ${ALL_LIBS})
 
