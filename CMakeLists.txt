@@ -24,7 +24,6 @@ set(ALL_LIBS
     ${CMAKE_THREAD_LIBS_INIT} 
     ${DL}
     ${CPP}
-    ${SUP_CPP}
     ${Z}
     ${C}
 )

@@ -4,7 +4,7 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <map>
 #include <string>
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 
 #include "logging.hpp"
 #include "url.hpp"

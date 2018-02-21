@@ -63,8 +63,7 @@ ExternalProject_Add(json
     UPDATE_COMMAND "" # Skip annoying updates for every build
     INSTALL_COMMAND ""
 )
-SET(EXTRA_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/json/src)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/json/src)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/3rd_party/src/json/include)
 
 ## Beast - Allows us to talk to Rackspace cloud files et al.
 

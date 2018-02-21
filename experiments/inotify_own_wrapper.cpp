@@ -17,8 +17,6 @@
 #include <boost/asio/read.hpp>
 #include <boost/asio/buffers_iterator.hpp>
 
-#include <RESTClient/tcpip/SpyGuard.hpp>
-
 #include "../src/config_reader/config_reader.hpp"
 
 using boost::asio::yield_context;

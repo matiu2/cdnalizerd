@@ -28,8 +28,8 @@ void fillAccountCache(yield_context &yield, const Config &config,
                          {{"RAX-KSKEY:apiKeyCredentials",
                            {{"username", *configEntry.username},
                             {"apiKey", *configEntry.apikey}}}}}};
-    req.body = json.dump();
-    req.set(http::field::content_length, req.body.size());
+    req.body() = json.dump();
+    req.set(http::field::content_length, req.body().size());
     // Make the request
     DLOG_S(1) << "Sending Request: " << req;
     try {
@@ -49,7 +49,7 @@ void fillAccountCache(yield_context &yield, const Config &config,
     http::async_read(conn.stream(), buffer, res, yield);
 
     // Update the RS object
-    Rackspace rs(json::parse(res.body));
+    Rackspace rs(json::parse(res.body()));
     cache.emplace(configEntry.username, std::move(rs));
 
     onDone();

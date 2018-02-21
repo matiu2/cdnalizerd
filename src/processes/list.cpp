@@ -4,7 +4,7 @@
 #include "../url.hpp"
 #include "../https.hpp"
 #include "../exception_tags.hpp"
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/exception/exception.hpp>
@@ -56,7 +56,7 @@ void genericDoListContainer(
         LOG_S(5) << "Downloaded info on "
                  << response["X-container-Object-Count"] << " objects"
                  << std::endl;
-        count = out(response.body, marker);
+        count = out(response.body(), marker);
       }
       case http::status::no_content: {
         LOG_S(5) << "No files in container: "

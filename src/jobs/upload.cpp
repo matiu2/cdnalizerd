@@ -81,13 +81,13 @@ void upload(const fs::path &source, URL dest, HTTPS &conn,
     req.method(http::verb::put);
     // Open the file
     boost::system::error_code ec;
-    req.body.open(source.native().c_str(), boost::beast::file_mode::scan, ec);
+    req.body().open(source.native().c_str(), boost::beast::file_mode::scan, ec);
     if (ec != boost::system::errc::success) {
       BOOST_THROW_EXCEPTION(
           boost::enable_error_info(boost::system::system_error(ec))
           << err::action("Openning file"));
     }
-    req.set(http::field::content_length, req.body.size());
+    req.set(http::field::content_length, req.body().size());
     LOG_S(9) << "HTTP Request: " << req.base();
     http::async_write(conn.stream(), req, conn.yield);
     // Make sure it's OK

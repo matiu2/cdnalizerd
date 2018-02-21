@@ -4,7 +4,7 @@
 #include <boost/asio/ssl.hpp>
 #include <boost/asio/spawn.hpp>
 #include <boost/beast.hpp>
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 #include <boost/exception/exception.hpp>
 
 #define LOGURU_IMPLEMENTATION 1
@@ -54,8 +54,8 @@ int testLogin(boost::asio::yield_context yield, asio::io_service& ios) {
   req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
   req.set(http::field::content_type, "application/json");
   req.set(http::field::accept, "application/json");
-  req.body = json.dump();
-  req.set(http::field::content_length, req.body.length());
+  req.body() = json.dump();
+  req.set(http::field::content_length, req.body().length());
 
   DLOG_S(9) << "Sending Request: " << req;
   try {
@@ -85,7 +85,7 @@ int testLogin(boost::asio::yield_context yield, asio::io_service& ios) {
         boost::enable_error_info(std::runtime_error("Bad http response code")));
   }
 
-  nlohmann::json j(nlohmann::json::parse(res.body.data()));
+  nlohmann::json j(nlohmann::json::parse(res.body().data()));
   std::string token = j["access"]["token"]["id"];
   LOG_S(INFO) << "Got token: " << token;
 

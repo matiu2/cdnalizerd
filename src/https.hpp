@@ -111,7 +111,7 @@ public:
 
 template <typename Req>
 void setDefaultHeaders(Req& req, std::string token) {
-    req.version = 11;
+    req.version(11);
     req.set(http::field::user_agent, userAgent());
     req.set(http::field::content_type, "application/json");
     req.set(http::field::accept, "application/json");
