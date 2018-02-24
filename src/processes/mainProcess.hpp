@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../config_reader/config.hpp"
+#include "../config/config.hpp"
 
 namespace cdnalizerd {
 namespace processes {

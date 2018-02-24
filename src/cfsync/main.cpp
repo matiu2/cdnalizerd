@@ -1,5 +1,7 @@
 /// RSync emulator for to/from Rackspace cloud files
 
+#include "../WorkerManager.hpp"
+
 #include <boost/program_options.hpp>
 
 #include <string>
@@ -7,10 +9,14 @@
 #include <sstream>
 
 namespace po = boost::program_options;
+using namespace cdnalizerd;
 
 struct Options {
   std::string source;
   std::string dest;
+  std::string username;
+  std::string apikey;
+  std::string region;
 };
 
 bool setupCommandlineOptions(int argc, char **argv, Options &result) {
@@ -19,9 +25,14 @@ bool setupCommandlineOptions(int argc, char **argv, Options &result) {
                                 "with 'cf://' at the beginning. Everything "
                                 "else is considered a path")(
       "source", po::value<std::string>(&result.source),
-      "Source path or cloud file URL")("dest",
-                                       po::value<std::string>(&result.dest),
-                                       "Destinanion path or cloud file URL");
+      "Source path or cloud file URL (cf://)")(
+      "dest", po::value<std::string>(&result.dest),
+      "Destinanion path or cloud file URL (cf://)")(
+      "username", po::value<std::string>(&result.username),
+      "Rackspace username")("apikey", po::value<std::string>(&result.apikey),
+                            "Rackspace api key")(
+      "dc", po::value<std::string>(&result.region),
+      "Rackspace datacenter DFW / IAD / LON / ORD / SYD");
   po::positional_options_description p;
   p.add("source", 1);
   p.add("dest", 1);
@@ -68,6 +79,7 @@ int main(int argc, char **argv) {
   Options options;
   if (!setupCommandlineOptions(argc, argv, options))
     return 1;
+  WorkerManager workers;
   std::cout << "Source: " << options.source << "\n"
             << "Dest: " << options.dest << "\n";
 }

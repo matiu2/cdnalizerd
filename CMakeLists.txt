@@ -11,24 +11,6 @@ include(cmake/dependencies.cmake)
 
 message("Threading Library: ${CMAKE_THREAD_LIBS_INIT}")
 
-set(ALL_LIBS
-    ${Boost_COROUTINE_LIBRARY} 
-    ${Boost_CONTEXT_LIBRARY} 
-    ${Boost_IOSTREAMS_LIBRARY} 
-    ${Boost_PROGRAM_OPTIONS_LIBRARY} 
-    ${Boost_DATE_TIME_LIBRARY}
-    ${Boost_FILESYSTEM_LIBRARY} 
-    ${Boost_THREAD_LIBRARY} 
-    ${Boost_SYSTEM_LIBRARY} 
-    ${OPENSSL_LIBRARIES}
-    ${CMAKE_THREAD_LIBS_INIT} 
-    ${DL}
-    ${CPP}
-    ${Z}
-    ${C}
-)
-
-
 add_definitions(-DBOOST_COROUTINE_NO_DEPRECATION_WARNING)
 add_definitions(-DBOOST_COROUTINES_NO_DEPRECATION_WARNING)
 #ADD_DEFINITIONS(-DBOOST_LOG_NO_THREADS)

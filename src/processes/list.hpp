@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../AccountCache.hpp"
-#include "../config_reader/config.hpp"
+#include "../config/config.hpp"
 
 #include <nlohmann/json.hpp>
 #include <boost/algorithm/string/find.hpp>

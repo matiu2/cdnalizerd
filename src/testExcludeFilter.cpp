@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "config_reader/config.hpp"
+#include "config/config.hpp"
 
 std::vector<std::string> input{"abc",
                                "def",

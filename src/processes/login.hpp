@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../AccountCache.hpp"
-#include "../config_reader/config.hpp"
+#include "../config/config.hpp"
 
 namespace cdnalizerd {
 

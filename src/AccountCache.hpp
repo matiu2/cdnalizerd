@@ -3,7 +3,7 @@
 
 #include "common.hpp"
 #include "Rackspace.hpp"
-#include "config_reader/config.hpp"
+#include "config/config.hpp"
 
 #include <functional>
 

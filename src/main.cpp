@@ -4,8 +4,8 @@
 #include <iostream>
 #include <fstream>
 
-#include "config_reader/config_reader.hpp"
-#include "config_reader/config_writer.hpp"
+#include "config/config_reader.hpp"
+#include "config/config_writer.hpp"
 #include "processes/mainProcess.hpp"
 #include "processes/list.hpp"
 #include "processes/login.hpp"

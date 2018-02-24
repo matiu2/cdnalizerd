@@ -27,23 +27,35 @@ add_custom_target(
 )
 
 add_executable(test_login test_login.cpp https.cpp)
-target_link_libraries(test_login ${ALL_LIBS})
+target_link_libraries(test_login 
+  ${CMAKE_THREAD_LIBS_INIT}
+  ${DL}
+  ${Boost_COROUTINE_LIBRARY}
+  ${Boost_SYSTEM_LIBRARY}
+  ${OPENSSL_LIBRARIES}
+)
 add_test(test_login test_login)
 
-add_executable(cdnalizerd 
-  main.cpp https.cpp utils.cpp inotify.cpp https.cpp AccountCache.cpp Job.cpp Worker.cpp logging.cpp url.cpp
-  jobs/upload.cpp 
-  jobs/delete.cpp 
-  processes/mainProcess.cpp processes/login.cpp processes/list.cpp processes/syncAllDirectories.cpp
-  config_reader/config_reader.cpp config_reader/config.cpp config_reader/config_writer.cpp)
-add_dependencies(cdnalizerd url_parser.hpp)
-target_link_libraries(cdnalizerd ${ALL_LIBS})
+add_subdirectory(jobs)
+add_subdirectory(processes)
+add_subdirectory(config)
 
-add_executable(cfsync cfsync.cpp) 
-target_link_libraries(cfsync ${ALL_LIBS})
+add_library(rackspace STATIC
+  utils.cpp inotify.cpp https.cpp AccountCache.cpp Job.cpp Worker.cpp logging.cpp url.cpp
+)
+target_link_libraries(rackspace config processes)
+add_dependencies(rackspace url_parser.hpp)
 
-add_executable(testExcludeFilter config_reader/config.cpp testExcludeFilter.cpp logging.cpp)
-target_link_libraries(testExcludeFilter ${ALL_LIBS})
+add_executable(cdnalizerd main.cpp)
+target_link_libraries(cdnalizerd
+  ${Boost_PROGRAM_OPTIONS_LIBRARY}  
+  rackspace 
+) 
+    
+add_subdirectory(cfsync)
+
+add_executable(testExcludeFilter testExcludeFilter.cpp logging.cpp)
+target_link_libraries(testExcludeFilter config)
 
 add_test(NAME testExclude1 COMMAND testExcludeFilter "^f.n")
 add_test(NAME testExclude2 COMMAND testExcludeFilter "^fun")

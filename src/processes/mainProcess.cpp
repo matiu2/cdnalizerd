@@ -1,7 +1,7 @@
 #include "mainProcess.hpp"
 
 #include "../WorkerManager.hpp"
-#include "../config_reader/config.hpp"
+#include "../config/config.hpp"
 #include "../exception_tags.hpp"
 #include "../inotify.hpp"
 #include "../jobs/delete.hpp"

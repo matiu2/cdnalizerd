@@ -18,7 +18,7 @@
 #include "utils.hpp"
 #include "https.hpp"
 #include "logging.hpp"
-#include "config_reader/config.hpp"
+#include "config/config.hpp"
 
 namespace cdnalizerd {
   
