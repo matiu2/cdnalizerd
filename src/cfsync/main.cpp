@@ -1,6 +1,7 @@
 /// RSync emulator for to/from Rackspace cloud files
 
 #include "../WorkerManager.hpp"
+#include "../logging.hpp"
 
 #include <boost/program_options.hpp>
 
@@ -17,6 +18,7 @@ struct Options {
   std::string username;
   std::string apikey;
   std::string region;
+  int log_verbosity;
 };
 
 bool setupCommandlineOptions(int argc, char **argv, Options &result) {
@@ -32,7 +34,9 @@ bool setupCommandlineOptions(int argc, char **argv, Options &result) {
       "Rackspace username")("apikey", po::value<std::string>(&result.apikey),
                             "Rackspace api key")(
       "dc", po::value<std::string>(&result.region),
-      "Rackspace datacenter DFW / IAD / LON / ORD / SYD");
+      "Rackspace datacenter DFW / IAD / LON / ORD / SYD")(
+      "log-verbosity", po::value<int>(&result.log_verbosity)->default_value(0),
+      "-9 to 9 - FATAL=-3, INFO=0, DEBUG=5, TRACE=9");
   po::positional_options_description p;
   p.add("source", 1);
   p.add("dest", 1);
@@ -72,6 +76,15 @@ bool setupCommandlineOptions(int argc, char **argv, Options &result) {
     options.print(std::cerr, 80);
     return false;
   }
+
+  // Process logging
+  if ((result.log_verbosity < -9) || (result.log_verbosity > 9)) {
+    init_logging(9);
+    LOG_S(FATAL) << "--log-verbosity must be between -9 and 9";
+    return -1;
+  }
+
+  init_logging(result.log_verbosity);
   return true;
 }
 
@@ -80,6 +93,7 @@ int main(int argc, char **argv) {
   if (!setupCommandlineOptions(argc, argv, options))
     return 1;
   WorkerManager workers;
+
   std::cout << "Source: " << options.source << "\n"
             << "Dest: " << options.dest << "\n";
 }
