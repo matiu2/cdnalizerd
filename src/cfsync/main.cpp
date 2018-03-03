@@ -1,7 +1,7 @@
 /// RSync emulator for to/from Rackspace cloud files
 
 #include "commandLineOptions.hpp"
-#include "worker.hpp"
+#include "cfsync.hpp"
 #include "../config/config.hpp"
 #include "../logging.hpp"
 #include "../https.hpp"

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../AccountCache.hpp"
-#include "worker.hpp"
 
 using namespace cdnalizerd;
 
