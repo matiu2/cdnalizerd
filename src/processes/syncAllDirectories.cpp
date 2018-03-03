@@ -26,7 +26,7 @@ void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
   LOG_S(5) << "Syncing config entry: " << config.username << " - "
            << config.region << " - " << (config.snet ? "snet" : "no snet")
            << " - filesToIgnore.size(): " << config.filesToIgnore.size();
-  URL baseURL(rs.getURL(*config.region, config.snet));
+  URL baseURL(rs.getURL(config.region, config.snet));
   HTTPS conn(yield, baseURL.host);
   // Get iterators to our local files
   std::vector<fs::path> localFiles(
@@ -83,7 +83,7 @@ void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
           LOG_S(5) << "Making upload job: " << local_iterator->native();
           worker->addJob(jobs::makeUploadJob(
               *local_iterator,
-              url / *config.container / config.remote_dir / localRelativePath));
+              url / config.container / config.remote_dir / localRelativePath));
         }
       };
       if (diff == 0) {
@@ -137,7 +137,7 @@ void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
       LOG_S(5) << "Making upload job: " << local_iterator->native();
       worker->addJob(jobs::makeUploadJob(
           *local_iterator,
-          url / *config.container / config.remote_dir / localRelativePath));
+          url / config.container / config.remote_dir / localRelativePath));
     }
     ++local_iterator;
   }

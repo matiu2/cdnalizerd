@@ -41,7 +41,7 @@ add_subdirectory(processes)
 add_subdirectory(config)
 
 add_library(rackspace STATIC
-  utils.cpp inotify.cpp https.cpp AccountCache.cpp Job.cpp Worker.cpp logging.cpp url.cpp
+    utils.cpp inotify.cpp https.cpp AccountCache.cpp Job.cpp Worker.cpp logging.cpp url.cpp
 )
 target_link_libraries(rackspace config processes)
 add_dependencies(rackspace url_parser.hpp)

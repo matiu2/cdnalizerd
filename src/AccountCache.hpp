@@ -9,17 +9,17 @@
 
 namespace cdnalizerd {
 
-struct CompareSharedPtr {
-  bool operator()(const sstring &a, const sstring &b) const {
-    return ((a ? *a : "") < (b ? *b : ""));
-  }
-};
-
 /// maps config.username to a Rackspace object
-using AccountCache = std::map<sstring, Rackspace, CompareSharedPtr>;
+using AccountCache = std::map<std::string, Rackspace>;
 
-/// Worker that fills an account cache by logging on to all the RS accounts and
-/// getting the token and json
+/// Fills a single account cache entry from a single ConfigEntry
+void fillSingleAccountCache(yield_context &yield,
+                            const ConfigEntry &configEntry,
+                            AccountCache &cache);
+
+/// Worker that fills an account cache by logging on to all the RS accounts
+/// and getting the token and json
+/// Calls 'onDone' once all the logins are complete.
 void fillAccountCache(yield_context &yield, const Config &config,
                       AccountCache &cache, std::function<void()> onDone);
 

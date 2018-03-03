@@ -20,12 +20,12 @@ void genericDoListContainer(
     std::function<size_t(const std::string &, std::string &)> out,
     yield_context &yield, const Rackspace &rackspace, const ConfigEntry &entry,
     bool restrict_to_remote_dir, std::string extra_params = "") {
-  URL baseURL(rackspace.getURL(*entry.region, entry.snet));
+  URL baseURL(rackspace.getURL(entry.region, entry.snet));
   LOG_S(INFO) << "Connecting to " << baseURL.scheme_host_port() << std::endl;
 
   HTTPS conn(yield, baseURL.host);
   http::request<http::empty_body> req{
-      http::verb::get, baseURL.path + "/" + *entry.container, 11};
+      http::verb::get, baseURL.path + "/" + entry.container, 11};
   req.set(http::field::user_agent, "cdnalizerd v0.2");
   req.set("X-Auth-Token", rackspace.token());
 
@@ -36,7 +36,7 @@ void genericDoListContainer(
     prefix = entry.remote_dir;
 
   while (true) {
-    std::string path(baseURL.path + "/" + *entry.container + "?limit=" +
+    std::string path(baseURL.path + "/" + entry.container + "?limit=" +
                      std::to_string(limit));
     if (!marker.empty())
       path += "&marker=" + marker;
@@ -136,8 +136,8 @@ void listContainers(yield_context yield, const AccountCache &accounts,
   try {
     using namespace std;
     for (const ConfigEntry &entry : config.entries()) {
-      LOG_S(5) << "Listing Config entry: " << *entry.username << " - "
-               << *entry.container;
+      LOG_S(5) << "Listing Config entry: " << entry.username << " - "
+               << entry.container;
       const Rackspace &rs(accounts.at(entry.username));
       for (std::vector<std::string> files : listContainer(yield, rs, entry)) {
         for (const std::string &filename : files)
@@ -164,8 +164,8 @@ void JSONListContainers(yield_context yield, const AccountCache &accounts,
     using namespace std;
     for (const ConfigEntry &entry : config.entries()) {
       cout << "========\n"
-           << "Username: " << *entry.username << '\n'
-           << "Container: " << *entry.container << "\n\n";
+           << "Username: " << entry.username << '\n'
+           << "Container: " << entry.container << "\n\n";
       for (auto files :
            JSONListContainer(yield, accounts.at(entry.username), entry, false))
         for (const auto &data : files)

@@ -17,19 +17,20 @@ namespace cdnalizerd {
 
 /// Holds a single mapping from a local folder to remote location
 struct ConfigEntry {
-  sstring username;
-  sstring apikey;
-  sstring region;
-  sstring container;
+  std::string username;
+  std::string apikey;
+  std::string region;
+  std::string container;
   bool snet;
   bool move; // Move file to cloud instead of just copy
   std::string local_dir;
   std::string remote_dir;
   std::vector<std::regex> filesToIgnore;
   std::vector<std::regex> directoriesToIgnore;
-  ConfigEntry(sstring username, sstring apikey, sstring region,
-              sstring container, bool snet, bool move, std::string local_dir,
-              std::string remote_dir, std::vector<std::regex> filesToIgnore,
+  ConfigEntry(std::string username, std::string apikey, std::string region,
+              std::string container, bool snet, bool move,
+              std::string local_dir, std::string remote_dir,
+              std::vector<std::regex> filesToIgnore,
               std::vector<std::regex> directoriesToIgnore)
       : username(username), apikey(apikey), region(region),
         container(container), snet(snet), move(move),
@@ -49,20 +50,35 @@ struct ConfigEntry {
   /// Returns true if a directory should be ignored
   bool shouldIgnoreDirectory(const std::string &dirName) const;
 
+  /// Add a new file to ignore
+  void addFileToIgnore(std::regex file) {
+    filesToIgnore.emplace_back(std::move(file));
+  }
+  /// Add a new directory to ignore
+  void addDirectoryToIgnore(std::regex directory) {
+    directoriesToIgnore.emplace_back(std::move(directory));
+  }
+
+  /// Returns true if the config entry is ready for use
+  bool validate() const {
+    return (!username.empty()) && (!apikey.empty()) && (!region.empty()) &&
+           (!container.empty()) && (!local_dir.empty()) &&
+           (!remote_dir.empty());
+  }
+
   // To allow easy sorting
   bool operator<(const ConfigEntry &other) const {
     return (local_dir < other.local_dir) ||
-           (remote_dir < other.remote_dir) || (*username < *other.username) ||
-           (*region < *other.region) || (*container < *other.container) ||
-           (*apikey < *other.apikey) || (snet < other.snet) ||
+           (remote_dir < other.remote_dir) || (username < other.username) ||
+           (region < other.region) || (container < other.container) ||
+           (apikey < other.apikey) || (snet < other.snet) ||
            (move < other.move);
   }
   bool operator==(const std::string &path) const { return local_dir == path; }
   bool operator==(const ConfigEntry &other) const {
-    return (local_dir == other.local_dir) &&
-           (remote_dir == other.remote_dir) &&
-           (*username == *other.username) && (*region == *other.region) &&
-           (*container == *other.container) && (*apikey == *other.apikey) &&
+    return (local_dir == other.local_dir) && (remote_dir == other.remote_dir) &&
+           (username == other.username) && (region == other.region) &&
+           (container == other.container) && (apikey == other.apikey) &&
            (snet == other.snet) && (move == other.move);
   }
 };
@@ -103,41 +119,19 @@ using Entries = std::vector<ConfigEntry>;
 class Config {
 private:
   Entries _entries;
-  ConfigEntry lastEntry;
 
 public:
-  void addUsername(std::string username) { lastEntry.username.reset(new std::string(std::move(username))); }
-  void addApiKey(std::string apikey) { lastEntry.apikey.reset(new std::string(std::move(apikey))); }
-  void addRegion(std::string region) { lastEntry.region.reset(new std::string(std::move(region))); }
-  void addContainer(std::string container) { lastEntry.container.reset(new std::string(std::move(container))); }
-  void addFileToIgnore(std::regex file) {
-    lastEntry.filesToIgnore.emplace_back(std::move(file));
-  }
-  void addDirectoryToIgnore(std::regex directory) {
-    lastEntry.directoriesToIgnore.emplace_back(std::move(directory));
-  }
-  /// Toggles service net on and off
-  void setSNet(bool new_val) {
-    lastEntry.snet = new_val;
-  }
-  /// Toggles move to cloud (instead of just copy) on and off
-  void setMove(bool new_val) {
-    lastEntry.move = new_val;
-  } 
-  void addEntry(std::string local_dir, std::string remote_dir);
-
   Config() = default;
 
-  Config(const Config &other)
-      : _entries(other._entries), lastEntry(other.lastEntry) {}
-  Config(Config &&other)
-      : _entries(std::move(other._entries)), lastEntry(other.lastEntry) {}
+  Config(const Config &other) : _entries(other._entries) {}
+  Config(Config &&other) : _entries(std::move(other._entries)) {}
 
   Config &operator=(const Config &other) {
     _entries = other._entries;
-    lastEntry = other.lastEntry;
     return *this;
   }
+
+  void addEntry(ConfigEntry entry);
 
   const ConfigEntry& getEntryByPath(const std::string &path) const;
   const Entries &entries() const { return _entries; }

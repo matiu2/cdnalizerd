@@ -26,22 +26,15 @@ bool ConfigEntry::shouldIgnoreDirectory(const std::string& dirName) const {
 }
 
 
-void Config::addEntry(std::string local_dir, std::string remote_dir) {
+void Config::addEntry(ConfigEntry entry) {
   // Validate what we have
-  if ((!lastEntry.username) || (lastEntry.username->empty()) ||
-      (!lastEntry.apikey) || (lastEntry.apikey->empty()) ||
-      (!lastEntry.region) || (lastEntry.region->empty()) ||
-      (!lastEntry.container) || (lastEntry.container->empty()))
+  if (!entry.validate())
     throw ConfigError("Need to have a valid username, apikey, region "
                       "and container before adding a path pair");
-  // Now create it
-  ConfigEntry result(lastEntry);
-  result.local_dir = std::move(local_dir);
-  result.remote_dir = std::move(remote_dir);
   // Place it in a sorted location
   auto place =
-      std::lower_bound(_entries.begin(), _entries.end(), result.local_dir);
-  _entries.emplace(place, std::move(result));
+      std::lower_bound(_entries.begin(), _entries.end(), entry.local_dir);
+  _entries.emplace(place, std::move(entry));
 }
 
 const ConfigEntry& Config::getEntryByPath(const std::string &path) const {

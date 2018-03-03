@@ -94,20 +94,23 @@ struct ConfigReader {
   }
 
   void parseTree(const ptree& pt) {
-    config.addUsername(pt.get<std::string>("username"));
-    config.addApiKey(pt.get<std::string>("apikey"));
-    config.addRegion(pt.get<std::string>("region"));
-    config.addContainer(pt.get<std::string>("container"));
-    config.setSNet(pt.get("snet", false));
+    ConfigEntry entry;
+    entry.username = pt.get<std::string>("username");
+    entry.apikey = pt.get<std::string>("apikey");
+    entry.region = pt.get<std::string>("region");
+    entry.container = pt.get<std::string>("container");
+    entry.local_dir = pt.get<std::string>("local_dir");
+    entry.remote_dir = pt.get<std::string>("remote_dir");
+    entry.snet = pt.get("snet", false);
     auto filesToIgnore = pt.get_child_optional("files-to-ignore");
     if (filesToIgnore)
       for( const auto& file : *filesToIgnore )
-        config.addFileToIgnore(std::regex(file.second.get_value<std::string>()));
+        entry.addFileToIgnore(std::regex(file.second.get_value<std::string>()));
     auto directoriesToIgnore = pt.get_child_optional("directories-to-ignore");
     if (directoriesToIgnore)
       for( const auto& file : *directoriesToIgnore )
-        config.addDirectoryToIgnore(std::regex(file.second.get_value<std::string>()));
-    config.addEntry(pt.get<std::string>("local_dir"), pt.get<std::string>("remote_dir"));
+        entry.addDirectoryToIgnore(std::regex(file.second.get_value<std::string>()));
+    config.addEntry(std::move(entry));
   }
 
   Config &&getConfig() {

@@ -94,10 +94,10 @@ void watchForFileChanges(yield_context yield, const Config &config) {
             boost::enable_error_info(std::runtime_error(
                 "All Rackspace accounts should be initialized "
                 "by the time this is called"))
-            << err::username(*entry.username));
+            << err::username(entry.username));
       Rackspace &rs = found->second;
       fs::path localFile(event.path());
-      URL url(rs.getURL(*entry.region, entry.snet));
+      URL url(rs.getURL(entry.region, entry.snet));
       auto worker = workers.getWorker(url.whole(), rs);
       std::string localRelativePath(
           fs::relative(event.path(), entry.local_dir).string());
@@ -115,7 +115,7 @@ void watchForFileChanges(yield_context yield, const Config &config) {
             LOG_S(9) << "Making upload job: " << localFile.native();
             worker->addJob(jobs::makeConditionalUploadJob(
                 localFile,
-                url / *entry.container / entry.remote_dir / localRelativePath));
+                url / entry.container / entry.remote_dir / localRelativePath));
           }
         }
       } else if (event.wasIgnored()) {
@@ -133,7 +133,7 @@ void watchForFileChanges(yield_context yield, const Config &config) {
           } else {
             LOG_S(9) << "Creating delete job";
             worker->addJob(jobs::makeRemoteDeleteJob(
-                url / *entry.container / entry.remote_dir / localRelativePath));
+                url / entry.container / entry.remote_dir / localRelativePath));
           }
         }
       } else if (event.wasCreated()) {
