@@ -50,7 +50,7 @@ void fillSingleAccountCache(yield_context &yield,
 
 void fillSingleAccountCache(yield_context &yield,
                             const ConfigEntry &configEntry,
-                            AccountCache &cache, HTTPS& https) {
+                            AccountCache &cache) {
   const std::string host("identity.api.rackspacecloud.com");
   HTTPS conn(yield, host);
   // This buffer is used for reading and must be persisted
@@ -58,10 +58,9 @@ void fillSingleAccountCache(yield_context &yield,
   fillSingleAccountCache(yield, configEntry, cache, conn, host, buffer);
 }
 
-
 void fillAccountCache(yield_context &yield, const Config &config,
                       AccountCache &cache, std::function<void()> onDone) {
-  
+
   const std::string host("identity.api.rackspacecloud.com");
   HTTPS conn(yield, host);
   // This buffer is used for reading and must be persisted
