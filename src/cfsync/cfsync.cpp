@@ -35,10 +35,11 @@ void cfsync(yield_context &yield, JobType jobType, ConfigEntry &entry) {
   // For each of the remote files (already sorted)
   std::cout << "Remote: \n";
   for (const auto &remoteList : remoteChunks) {
-    auto remote_iterator = remoteList.begin();
-    auto remote_end = remoteList.end();
-    // For now, just print out the local and remote dirs
-    std::cout << *remote_iterator++ << '\n';
+    for (const auto &remoteLine :
+         boost::make_iterator_range(remoteList.begin(), remoteList.end())) {
+      // For now, just print out the local and remote dirs
+      std::cout << remoteLine << '\n';
+    }
   }
   std::cout << "\nLocal: \n";
   // For each directory

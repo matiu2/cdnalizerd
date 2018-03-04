@@ -53,9 +53,9 @@ int main(int argc, char **argv) {
   entry.local_dir = options.source;
   entry.remote_dir = options.dest;
   entry.snet = options.snet;
-  options.region = options.region;
-  options.apikey = options.apikey;
-  options.username = options.username;
+  entry.region = options.region;
+  entry.apikey = options.apikey;
+  entry.username = options.username;
 
   asio::io_service ios;
   cdnalizerd::service(&ios);
