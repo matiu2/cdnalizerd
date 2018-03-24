@@ -10,34 +10,45 @@
 #include <boost/exception/exception.hpp>
 #include <boost/exception/diagnostic_information.hpp> 
 #include <boost/exception_ptr.hpp>
+#include <boost/hana.hpp>
 
 namespace cdnalizerd {
+
+namespace processes {
 
 using json = nlohmann::json;
 using namespace std::literals;
 
-void genericDoListContainer(
-    std::function<size_t(const std::string &, std::string &)> out,
-    yield_context &yield, const Rackspace &rackspace, const ConfigEntry &entry,
-    bool restrict_to_remote_dir, std::string extra_params = "") {
-  URL baseURL(rackspace.getURL(entry.region, entry.snet));
+/// A generator of either vectors of strings, or a json list
+/// - because the API server paginates output
+/// The server returns to us a page of container entries
+template <typename Payload>
+using ListContainerCoroutine =
+    boost::coroutines::coroutine<Payload>;
+template <typename Payload>
+using ListContainerPusher = typename ListContainerCoroutine<Payload>::push_type;
+template <typename Payload>
+using ListContainerResult = typename ListContainerCoroutine<Payload>::pull_type;
+
+template <typename Payload>
+void doGetPages(ListContainerPusher<Payload> out, yield_context &yield,
+                const std::string &token, const URL &baseURL,
+                const std::string &prefix, const std::string &container,
+                std::string extra_params = "") {
   LOG_S(INFO) << "Connecting to " << baseURL.scheme_host_port() << std::endl;
 
   HTTPS conn(yield, baseURL.host);
-  http::request<http::empty_body> req{
-      http::verb::get, baseURL.path + "/" + entry.container, 11};
-  req.set(http::field::user_agent, "cdnalizerd v0.2");
-  req.set("X-Auth-Token", rackspace.token());
+  http::request<http::empty_body> req{http::verb::get,
+                                      baseURL.path + "/" + container, 12};
+  req.set(http::field::user_agent, "cdnalizerd v1.2");
+  req.set("X-Auth-Token", token);
 
-  const size_t limit = 10000;
+  const size_t limit = 10001;
   std::string marker;
-  std::string prefix;
-  if (restrict_to_remote_dir && (!entry.remote_dir.empty()))
-    prefix = entry.remote_dir;
 
   while (true) {
-    std::string path(baseURL.path + "/" + entry.container + "?limit=" +
-                     std::to_string(limit));
+    std::string path(baseURL.path + "/" + container +
+                     "?limit=" + std::to_string(limit));
     if (!marker.empty())
       path += "&marker=" + marker;
     if (!prefix.empty())
@@ -45,39 +56,61 @@ void genericDoListContainer(
     if (!extra_params.empty())
       path.append(extra_params);
     req.target(path);
-    LOG_S(5) << "HTTP Request: " << req;
+    LOG_S(6) << "HTTP Request: " << req;
     http::async_write(conn.stream(), req, yield);
     http::response<http::string_body> response;
     http::async_read(conn.stream(), conn.read_buffer, response, conn.yield);
     DLOG_S(9) << "HTTP Response: " << response;
-    size_t count(0);
+    size_t count(1);
     switch (response.result()) {
-      case http::status::ok: {
-        LOG_S(5) << "Downloaded info on "
-                 << response["X-container-Object-Count"] << " objects"
-                 << std::endl;
-        count = out(response.body(), marker);
-      }
-      case http::status::no_content: {
-        LOG_S(5) << "No files in container: "
-                 << response["X-container-Object-Count"] << " objects"
-                 << std::endl;
-        break;
-      } 
-      case http::status::not_found: {
-        LOG_S(ERROR) << "Path not found on server: "
-                     << baseURL.scheme_host_port() + path;
-      }
-      case http::status::conflict: {
-        // TODO: Maybe set a timer and try againg in a minute ?
-        LOG_S(ERROR) << "Server unable to comply - try again later: "
-                     << baseURL.scheme_host_port() + path;
-      }
-      default:
-        BOOST_THROW_EXCEPTION(
-            boost::enable_error_info(std::runtime_error(
-                "Invalid Response when trying to list container"))
-            << err::http_status(response.result()));
+    case http::status::ok: {
+      LOG_S(6) << "Downloaded info on " << response["X-container-Object-Count"]
+               << " objects" << std::endl;
+      using namespace boost::hana;
+      Payload data;
+      if_(type_c<Payload> == type_c<nlohmann::json>,
+          [&] {
+            auto begin = boost::make_split_iterator(response.body(),
+                                                    boost::first_finder("\n"));
+            decltype(begin) end;
+            std::vector<std::string> data;
+            for (auto range : boost::make_iterator_range(begin, end)) {
+              std::string entry(range.begin(), range.end());
+              if (!entry.empty()) {
+                data.emplace_back(std::move(entry));
+                ++count;
+              }
+            }
+            if (!data.empty())
+              marker = data.back();
+            out(std::move(data));
+          },
+          [&] {
+            nlohmann::json data;
+            nlohmann::to_json(data, std::move(response.body()));
+            out(std::move(data));
+          })();
+    }
+    case http::status::no_content: {
+      LOG_S(6) << "No files in container: "
+               << response["X-container-Object-Count"] << " objects"
+               << std::endl;
+      break;
+    }
+    case http::status::not_found: {
+      LOG_S(ERROR) << "Path not found on server: "
+                   << baseURL.scheme_host_port() + path;
+    }
+    case http::status::conflict: {
+      // TODO: Maybe set a timer and try againg in a minute ?
+      LOG_S(ERROR) << "Server unable to comply - try again later: "
+                   << baseURL.scheme_host_port() + path;
+    }
+    default:
+      BOOST_THROW_EXCEPTION(
+          boost::enable_error_info(std::runtime_error(
+              "Invalid Response when trying to list container"))
+          << err::http_status(response.result()));
     };
     // If we didn't get 'limit' results, we're done
     assert(count <= limit);
@@ -86,106 +119,87 @@ void genericDoListContainer(
   }
 }
 
-/// Fills 'out' with the contents of a container. Returns true if we need to
-void doListContainer(ListContainerOut &out, yield_context &yield,
-                     const Rackspace &rackspace, const ConfigEntry &entry) {
-  auto handleOutput = [&out](const std::string &body, std::string &marker) {
-    auto begin = boost::make_split_iterator(body, boost::first_finder("\n"));
-    decltype(begin) end;
-    size_t count = 0;
-    std::vector<std::string> data;
-    while (begin != end) {
-      std::string entry(begin->begin(), begin->end());
-      if (!entry.empty()) {
-        data.emplace_back(std::move(entry));
-        ++count;
-      }
-      ++begin;
-    }
-    if (!data.empty())
-      marker = data.back();
-    // Yield our results
-    out(std::move(data));
-    return count;
-  };
-  genericDoListContainer(handleOutput, yield, rackspace, entry, false);
+
+/// Returns an iterator over pages (vectors of strings) of the remote container
+template <typename Payload>
+ListContainerResult<Payload>
+getPages(yield_context &yield, const std::string &token, const URL &baseURL,
+         const std::string &prefix, const std::string &container,
+         std::string extra_params = "") {
+  return ListContainerResult<Payload>(
+      [&, params = std::move(extra_params) ](auto &&out) {
+        doGetPages<Payload>(std::move(out), yield, token, baseURL, prefix,
+                            container, std::move(params));
+      });
 }
 
-void JSONDoListContainer(JSONListContainerOut &out, yield_context &yield,
-                         const Rackspace &rackspace, const ConfigEntry &entry,
-                         bool restrict_to_remote_dir) {
-  genericDoListContainer(
-      [&out](const std::string &body, std::string &marker) {
-        auto entries = json::parse(body);
-        size_t count = entries.size();
-        if (count == 0)
-          return count;
-        const auto &last(entries.back());
-        marker = last.at("name");
-        out(std::move(entries));
-        return count;
-      },
-      yield, rackspace, entry, restrict_to_remote_dir, "&format=json");
+/// Does the work of getting the entries, pushes them through 'out'
+template <typename Pusher>
+void doGetEntries(Pusher out, yield_context &yield, const std::string &token,
+                  const URL &baseURL, const std::string &prefix,
+                  std::string extra_params = "");
+
+template <typename Coroutine, typename Result = typename Coroutine::pull_type,
+          typename Pusher = typename Coroutine::push_type>
+Result listContainer(yield_context &yield, const Rackspace &rs,
+                     const ConfigEntry &entry, bool restrict_to_remote_dir,
+                     std::string extra_params = "") {
+  URL baseURL(rs.getURL(entry.region, entry.snet));
+  std::string prefix;
+  if (restrict_to_remote_dir && (!entry.remote_dir.empty()))
+    prefix = entry.remote_dir;
+  return Result([&](auto &&out) {
+    doGetEntries<Pusher>(std::move(out), yield, rs.token(), baseURL, prefix,
+                         extra_params);
+  });
 }
 
-namespace processes {
+/// Returns a generator of remote entries
+ListEntriesResult listContainer(yield_context &yield, const Rackspace &rs,
+                                const ConfigEntry &entry,
+                                std::string extra_params) {
+  return listContainer<ListEntriesCoroutine>(yield, rs, entry, true,
+                                             std::move(extra_params));
+}
 
-/// Prints out the contents of all containers
-void listContainers(yield_context yield, const AccountCache &accounts,
-                    const Config &config) {
-  try {
-    using namespace std;
-    for (const ConfigEntry &entry : config.entries()) {
-      LOG_S(5) << "Listing Config entry: " << entry.username << " - "
-               << entry.container;
-      const Rackspace &rs(accounts.at(entry.username));
-      for (std::vector<std::string> files : listContainer(yield, rs, entry)) {
-        for (const std::string &filename : files)
-          cout << filename << '\n';
-      }
-    }
-  } catch (boost::exception &e) {
-    LOG_S(ERROR) << "listContainers failed: "
-                 << boost::diagnostic_information(e, true);
-  } catch (std::exception &e) {
-    LOG_S(ERROR) << "listContainers failed (std::exception): "
-                 << ": " << boost::diagnostic_information(e, true) << std::endl;
-  } catch (...) {
-    LOG_S(ERROR) << "listContainers failed (unkown exception): "
-                 << boost::current_exception_diagnostic_information(true)
-                 << std::endl;
+/// Returns a generator of remote detailed entries
+DetailedListEntriesResult detailedListContainer(yield_context &yield,
+                                                const Rackspace &rs,
+                                                const ConfigEntry &entry,
+                                                std::string extra_params) {
+  return listContainer<DetailedListEntriesCoroutine>(yield, rs, entry, true,
+                                                     std::move(extra_params));
+}
+
+template <typename Pusher>
+void doGetEntries(Pusher out, yield_context &yield, const std::string &token,
+                  const URL &baseURL, const std::string &prefix,
+                  std::string extra_params) {
+  for (auto &&page : getPages<std::vector<std::string>>(yield, token, baseURL,
+                                                        prefix, extra_params))
+    for (const std::string &line : page)
+      out(line);
+}
+
+void doJSONGetEntries(ListEntriesPusher out, yield_context &yield,
+                      const std::string &token, const URL &baseURL,
+                      const std::string &prefix, std::string extra_params) {
+  if (extra_params.empty())
+    extra_params = "format=json";
+  else
+    extra_params += "&format=json";
+  for (auto &&page :
+       getPages<nlohmann::json>(yield, token, baseURL, prefix, extra_params)) {
+    nlohmann::json data;
+    nlohmann::to_json(data, std::move(page));
+    for (auto &line : page)
+      out(std::move(line));
   }
 }
 
-/// Prints out the contents of all containers
-void JSONListContainers(yield_context yield, const AccountCache &accounts,
-                        const Config &config) {
-  try {
-    using namespace std;
-    for (const ConfigEntry &entry : config.entries()) {
-      cout << "========\n"
-           << "Username: " << entry.username << '\n'
-           << "Container: " << entry.container << "\n\n";
-      for (auto files :
-           JSONListContainer(yield, accounts.at(entry.username), entry, false))
-        for (const auto &data : files)
-          cout << data.at("name") << " - " << data.at("hash") << " - "
-               << data.at("last_modified") << " - " << data.at("content_type")
-               << " - " << data.at("bytes") << '\n';
-    }
-  } catch (boost::exception &e) {
-    LOG_S(ERROR) << "JSONListContainers failed: "
-                 << boost::diagnostic_information(e, true);
-  } catch (std::exception &e) {
-    LOG_S(ERROR) << "JSONListContainers failed (std::exception): "
-                 << ": " << boost::diagnostic_information(e, true) << std::endl;
-  } catch (...) {
-    LOG_S(ERROR) << "JSONListContainers failed (unkown exception): "
-                 << boost::current_exception_diagnostic_information(true)
-                 << std::endl;
-  }
+template void doGetPages<std::vector<std::string>>(
+    ListContainerPusher<std::vector<std::string>> out, yield_context &yield,
+    const std::string &token, const URL &baseURL, const std::string &prefix,
+    const std::string &container, std::string extra_params);
 }
-
-} /* processes  */
-
 } /* cdnalizerd  */

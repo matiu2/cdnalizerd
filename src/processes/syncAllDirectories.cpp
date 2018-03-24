@@ -57,8 +57,7 @@ void syncOneConfigEntry(yield_context yield, const Rackspace &rs,
   auto local_iterator = localFiles.begin();
   auto local_end = localFiles.end();
   // Get files only in the remote path/prefix that we care about from the config
-  auto remoteChunks = JSONListContainer(yield, rs, config, true);
-  for (const auto &remoteList : remoteChunks) {
+  for (const auto &remoteList : detailedListContainer(yield, rs, config)) {
     auto remote_iterator = remoteList.begin();
     auto remote_end = remoteList.end();
     while ((local_iterator != local_end) && (remote_iterator != remote_end)) {

@@ -37,7 +37,7 @@ public:
   std::string path;
   std::string search;
   std::string pathAndSearch;
-  std::string scheme_host_port() {
+  std::string scheme_host_port() const {
     if (port.empty())
       return scheme + host;
     else

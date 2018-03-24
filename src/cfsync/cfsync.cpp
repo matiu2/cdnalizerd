@@ -30,7 +30,7 @@ void cfsync(yield_context &yield, JobType jobType, ConfigEntry &entry) {
   URL url(rs.getURL(entry.region, entry.snet));
   // Walk the files (ordered by inode, not alphabetically)
   auto remoteChunks =
-      cdnalizerd::processes::JSONListContainer(yield, rs, entry, true);
+      cdnalizerd::processes::detailedListContainer(yield, rs, entry);
   // Do the work
   // For each of the remote files (already sorted)
   std::cout << "Remote: \n";

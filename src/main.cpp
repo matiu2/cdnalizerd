@@ -73,13 +73,32 @@ int main(int argc, char **argv) {
       asio::spawn(ios, [&config](yield_context yield) {
         AccountCache accounts;
         login(yield, accounts, config);
-        cdnalizerd::processes::listContainers(std::move(yield), accounts, config);
+        for (const ConfigEntry &entry : config.entries()) {
+          LOG_S(5) << "Listing Config entry: " << entry.username << " - "
+                   << entry.container;
+          const Rackspace &rs(accounts.at(entry.username));
+          for (const std::string &line : cdnalizerd::processes::listContainer(
+                   yield, accounts.at(entry.username), entry))
+            std::cout << line << '\n';
+        }
       });
     else if (options.count("list-detailed"))
       asio::spawn(ios, [&config](yield_context yield) {
         AccountCache accounts;
         login(yield, accounts, config);
-        cdnalizerd::processes::JSONListContainers(std::move(yield), accounts, config);
+
+        for (const ConfigEntry &entry : config.entries()) {
+          std::cout << "========\n"
+                    << "Username: " << entry.username << '\n'
+                    << "Container: " << entry.container << "\n\n";
+          for (auto &&data : cdnalizerd::processes::detailedListContainer(
+                   yield, accounts.at(entry.username), entry)) {
+            std::cout << data.at("name") << " - " << data.at("hash") << " - "
+                      << data.at("last_modified") << " - "
+                      << data.at("content_type") << " - " << data.at("bytes")
+                      << '\n';
+          }
+        }
       });
     else if (options.count("go"))
       asio::spawn(ios, [&config](yield_context yield) {

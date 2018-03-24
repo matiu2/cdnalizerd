@@ -1,4 +1,8 @@
 #pragma once
+/** This compilation unit allows us to list files in remote rackspace servers.
+ * The server paginates the output. Using asynchronous API and generators
+ * (through coroutines), we just present the output as a single iterable list
+ */
 
 #include "../AccountCache.hpp"
 #include "../config/config.hpp"
@@ -10,59 +14,33 @@
 #include <string>
 
 namespace cdnalizerd {
+namespace processes {
 
 using namespace std::literals::string_literals;
 using nlohmann::json;
 
-struct ContainerEntry {
-  const std::string& username;
-  const std::string& container;
-  std::vector<std::string> files;
-};
+/// A generator of individual strings or json dicts for the detailed view, which
+/// are entries on the server This returns a single cointainer entry
+using ListEntriesCoroutine = boost::coroutines::coroutine<std::string>;
+using ListEntriesPusher = ListEntriesCoroutine::push_type;
+using ListEntriesResult = ListEntriesCoroutine::pull_type;
 
-using ListContainerCoroutine = boost::coroutines::coroutine<std::vector<std::string>>;
-using ListContainerResult = ListContainerCoroutine::pull_type;
-using ListContainerOut = ListContainerCoroutine::push_type;
+/// A generator of json straight from the server
+using DetailedListEntriesCoroutine =
+    boost::coroutines::coroutine<nlohmann::json>;
+using DetailedListEntriesPusher = DetailedListEntriesCoroutine::push_type;
+using DetailedListEntriesResult = DetailedListEntriesCoroutine::pull_type;
 
-using JSONListContainerCoroutine = boost::coroutines::coroutine<json>;
-using JSONListContainerResult = JSONListContainerCoroutine::pull_type;
-using JSONListContainerOut = JSONListContainerCoroutine::push_type;
+/// Returns a generator of remote entries
+ListEntriesResult listContainer(yield_context &yield, const Rackspace &rs,
+                                const ConfigEntry &entry,
+                                std::string extra_params = "");
 
-/// Fills 'out' with the contents of a container. Returns true if we need to
-void doListContainer(ListContainerOut &out, yield_context &yield,
-                     const Rackspace &rs, const ConfigEntry &entry);
-
-/// Fills 'out' with the contents of a container. Returns true if we need to
-/// if 'restrict' is true, it'll only list paths in the prefix entry.remote_dir
-void JSONDoListContainer(JSONListContainerOut &out, yield_context &yield,
-                         const Rackspace &rs, const ConfigEntry &entry,
-                         bool restrict);
-
-namespace processes {
-
-inline ListContainerResult listContainer(yield_context &yield,
-                                         const Rackspace &rs,
-                                         const ConfigEntry &entry) {
-  return ListContainerResult([&](ListContainerOut &pusher) {
-    doListContainer(pusher, yield, rs, entry);
-  });
-}
-
-inline JSONListContainerResult JSONListContainer(yield_context &yield,
-                                                 const Rackspace &rs,
-                                                 const ConfigEntry &entry,
-                                                 bool restrict_to_remote_dir) {
-  return JSONListContainerResult([&](JSONListContainerOut &pusher) {
-    JSONDoListContainer(pusher, yield, rs, entry, restrict_to_remote_dir);
-  });
-}
-
-/// Prints out the contents of all containers
-void listContainers(yield_context yield, const AccountCache& accounts, const Config &config);
-
-/// Prints out the contents of all containers
-void JSONListContainers(yield_context yield, const AccountCache& accounts, const Config &config);
-
+/// Returns a generator of remote entries
+DetailedListEntriesResult detailedListContainer(yield_context &yield,
+                                                const Rackspace &rs,
+                                                const ConfigEntry &entry,
+                                                std::string extra_params = "");
 
 } /* processes { */ 
 } /* cdnalizerd  */
