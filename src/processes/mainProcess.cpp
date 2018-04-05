@@ -47,11 +47,9 @@ void recursivelyWatchDirectory(inotify::Instance &inotify,
                                const ConfigEntry &entry, const char *path) {
   watchNewDirectory(inotify, watchToConfig, entry, entry.local_dir.c_str());
   // Recurse to all sub directories
-  for (auto d = fs::recursive_directory_iterator(path); d != decltype(d)();
-       ++d) {
+  for (auto d = fs::recursive_directory_iterator(path); d != decltype(d)(); ++d)
     if (fs::is_directory(*d))
       watchNewDirectory(inotify, watchToConfig, entry, d->path().native());
-  }
 }
 
 /// Reads our configuration object and creates all the inotify watches needed
@@ -119,12 +117,12 @@ void watchForFileChanges(yield_context yield, const Config &config) {
           }
         }
       } else if (event.wasIgnored()) {
-          LOG_S(9) << "Removing inotify watch for deleted directory";
-          auto found = watchToConfig.find(event.watch().handle());
-          // We should have already made a note of this watch and be tracking it
-          assert(found != watchToConfig.end());
-          watchToConfig.erase(found);
-          inotify.removeWatch(event.watch());
+        LOG_S(9) << "Removing inotify watch for deleted directory";
+        auto found = watchToConfig.find(event.watch().handle());
+        // We should have already made a note of this watch and be tracking it
+        assert(found != watchToConfig.end());
+        watchToConfig.erase(found);
+        inotify.removeWatch(event.watch());
       } else if (event.wasDeleted()) {
         LOG_S(9) << "Got delete event: " << event.path();
         if (!event.isDir()) {
@@ -138,9 +136,36 @@ void watchForFileChanges(yield_context yield, const Config &config) {
         }
       } else if (event.wasCreated()) {
         // ... if a directory was created, add a watch to it
-        if (event.isDir())
+        if (event.isDir()) {
+          LOG_S(9) << "Recursively watching new directory: " << event.path();
+          recursivelyWatchDirectory(inotify, watchToConfig, entry,
+                                    event.path().c_str());
+          // Because mkdir a/b/c/d/e/f only seems to give us one event; wait a
+          // bit, then retry in case new dirs have appeared
+          LOG_S(9) << "Waiting 2 secs...";
+          boost::asio::deadline_timer idleTimer(service(),
+                                                boost::posix_time::seconds(2));
+          idleTimer.async_wait(yield);
+          LOG_S(9) << "Recursively watching new directory for 2nd time: "
+                   << event.path();
           watchNewDirectory(inotify, watchToConfig, entry,
-                            event.path().c_str());
+                            entry.local_dir.c_str());
+          // Recurse and add watches for sub directories and upload files
+          for (auto d = fs::recursive_directory_iterator(event.path());
+               d != decltype(d)(); ++d) {
+            if (fs::is_directory(*d))
+              watchNewDirectory(inotify, watchToConfig, entry,
+                                d->path().native());
+            else if (fs::is_regular_file(*d)) {
+              LOG_S(9) << "Making upload job: " << d->path().native();
+              std::string localRelativePath(
+                  fs::relative(d->path(), entry.local_dir).string());
+              worker->addJob(jobs::makeConditionalUploadJob(
+                  d->path(), url / *entry.container / entry.remote_dir /
+                                 localRelativePath));
+            }
+          }
+        }
         // TODO: Sometimes files are created with > zero bytes. Check the file
         // size; if it's > 0, upload it
       }

@@ -186,8 +186,10 @@ struct Instance {
              << ") inotify handle(" << inotify_handle << ")" << std::endl;
     DLOG_S(9) << "paths: find " << path;
     auto found = paths.find(path);
-    if (found != paths.end())
-      throw std::logic_error("Can't watch the same path twice");
+    if (found != paths.end()) {
+      DLOG_S(9) << "Path already watched: " << path;
+      return watches.at(found->second);
+    }
     auto watch = Watch(inotify_handle, path, mask);
     LOG_S(5) << "watch handle for path (" << path << ") = " << watch.handle()
              << std::endl;
